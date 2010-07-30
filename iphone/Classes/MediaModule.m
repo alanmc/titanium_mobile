@@ -18,6 +18,7 @@
 #import "TiMediaAudioSession.h"
 #import "TiMediaMusicPlayer.h"
 #import "TiMediaItem.h"
+#import "UIImage+Resize.h"
 
 #import <AudioToolbox/AudioToolbox.h>
 #import <AVFoundation/AVAudioPlayer.h>
@@ -1597,4 +1598,4 @@ if (![TiUtils isIOS4OrGreater]) { \
 
 @end
 
-
+#endif
