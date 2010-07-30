@@ -43,6 +43,7 @@ canGoBack: returns true if the webview can go back in history
 canGoForward: returns true if the webview can go forward in history
 setBasicAuthentication: set the basic authentication for the webview instance to be used on subsequent url requests
 repaint: force the webview to repaint its contents
+clearCookies: clears device cookies from domains in the the specified list
 
 - method : setBasicAuthentication
 
@@ -56,6 +57,10 @@ password[string]: the password
 - method : evalJS, string
 
 content[string]: JavaScript code as a string. The code will be evaluated inside the webview context.
+
+- method : clearCookies, array
+
+domains[array]: An array of website domains.  Cookies from domains in the array will be deleted from the device
 
 - events
 

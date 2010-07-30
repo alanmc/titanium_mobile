@@ -32,6 +32,7 @@ CONTACTS_SORT_LAST_NAME[int]: constant for sorting group members by last name
 
 - methods
 
+getPeopleCount: Returns the count of all people in the contacts database
 getAllPeople: Returns an array of all `Titanium.Contacts.Person` objects in the contacts database
 getPeopleWithName: Returns an array of `Titanium.Contacts.Person` objects who have a name (first, last, middle, composite) which matches the given name
 getPersonByID: Returns a `Titanium.Contacts.Person` object with the given ID
