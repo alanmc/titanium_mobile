@@ -3,6 +3,8 @@
  * Copyright (c) 2009-2010 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
+ * 
+ * WARNING: This is generated code. Modify at your own risk and without support.
  */
 #ifdef USE_TI_MEDIA
 
@@ -693,7 +695,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 	}
 }
 
--(UIImage *)getAsset:(id)arg
+-(TiBlob *)getAsset:(id)arg
 {
 
   ONLY_IN_IOS4_OR_GREATER(getAsset,nil)
@@ -711,68 +713,6 @@ if (![TiUtils isIOS4OrGreater]) { \
     if (asset==nil) {
       NSLog(@"ALAsset was nil");
       isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      return;
-    }
-
-    ALAssetRepresentation* jpegRep = [asset representationForUTI:@"public.jpeg"];
-
-    if (jpegRep==nil) {
-      NSLog(@"ALAssetRepresentation was nil");
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      return;
-    }
-
-    CGImageRef jpegRepData = [jpegRep fullResolutionImage];
-
-    if (jpegRepData==nil) {
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      return;
-    }
-
-    currentAsset = [[UIImage alloc] initWithCGImage:jpegRepData
-                                    scale:[jpegRep scale]
-                                    orientation:[jpegRep orientation]];
-    isDoneRetrievingAsset = YES;
-
-  };
-  [library assetForURL:[NSURL URLWithString:arg]
-           resultBlock:assetConverter
-           failureBlock: ^(NSError *error) {
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      NSLog(@"Failure");
-    }];
-
-  while (isDoneRetrievingAsset == NO) {
-
-  };
-
-  isDoneRetrievingAsset = NO;
-
-  return currentAsset;
-}
-
--(TiBlob *)getAssetAsBlob:(id)arg
-{
-
-  ONLY_IN_IOS4_OR_GREATER(getAssetAsBlob,nil)
-
-  ENSURE_SINGLE_ARG(arg, NSString);
-
-  if (library==nil) {
-    library=[[ALAssetsLibrary alloc] init];
-  }
-
-  isDoneRetrievingAsset = NO;
-
-  void (^assetConverter)(struct ALAsset *) = ^(ALAsset *asset) {
-
-    if (asset==nil) {
-      NSLog(@"ALAsset was nil");
-      isDoneRetrievingAsset = YES;
       currentBuffer = nil;
       return;
     }
@@ -785,7 +725,7 @@ if (![TiUtils isIOS4OrGreater]) { \
       currentBuffer = nil;
       return;
     }
-
+    
     uint8_t *dataBuffer = malloc([jpegRep size]);
     [jpegRep getBytes:dataBuffer
 	     fromOffset:0
@@ -802,9 +742,9 @@ if (![TiUtils isIOS4OrGreater]) { \
   [library assetForURL:[NSURL URLWithString:arg]
            resultBlock:assetConverter
            failureBlock: ^(NSError *error) {
-      isDoneRetrievingAsset = YES;
       currentBuffer = nil;
       NSLog(@"Failure");
+      isDoneRetrievingAsset = YES;
     }];
 
   while (isDoneRetrievingAsset == NO) {
@@ -816,80 +756,10 @@ if (![TiUtils isIOS4OrGreater]) { \
   return currentBuffer;
 }
 
--(UIImage *)getAssetThumbnail:(id)arg
+-(TiBlob *)getAssetThumbnail:(id)arg
 {
 
   ONLY_IN_IOS4_OR_GREATER(getAssetThumbnail,nil)
-  ENSURE_SINGLE_ARG(arg, NSString);
-
-  if (library==nil) {
-    library=[[ALAssetsLibrary alloc] init];
-  }
-
-  isDoneRetrievingAsset = NO;
-
-  void (^assetConverter)(struct ALAsset *) = ^(ALAsset *asset) {
-
-    if (asset==nil) {
-      NSLog(@"ALAsset was nil");
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      return;
-    }
-
-    //ALAssetRepresentation* jpegRep = [asset representationForUTI:@"public.jpeg"];
-
-    //    if (jpegRep==nil) {
-    //      NSLog(@"ALAssetRepresentation was nil");
-    //      isDoneRetrievingAsset = YES;
-    //      currentAsset = nil;
-    //      return;
-    //    }
-
-    //CGImageRef jpegRepData = [jpegRep fullScreenImage];
-    CGImageRef jpegRepData = [asset thumbnail];
-
-    if (jpegRepData==nil) {
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      return;
-    }
-
-    currentAsset = [[UIImage alloc] initWithCGImage:jpegRepData];    
-    //    UIImage* newImage = [[UIImage alloc] initWithCGImage:jpegRepData
-    //					 scale:[jpegRep scale]
-    //					 orientation:[jpegRep orientation]];
-    
-    //    CGFloat width = newImage.size.width;
-    //    CGFloat height = newImage.size.height;
-
-    //    CGFloat newHeight = 75;
-    //    CGFloat newWidth = width * (newHeight / height);
-
-    //    currentAsset = [UIImageResize resizedImage:CGSizeMake(newWidth, newHeight) interpolationQuality:kCGInterpolationDefault image:newImage];
-    isDoneRetrievingAsset = YES;
-
-  };
-  
-  [library assetForURL:[NSURL URLWithString:arg]
-           resultBlock:assetConverter
-           failureBlock: ^(NSError *error) {
-      isDoneRetrievingAsset = YES;
-      currentAsset = nil;
-      NSLog(@"Failure");
-    }];
-
-  while (isDoneRetrievingAsset == NO) {};
-
-  isDoneRetrievingAsset = NO;
-
-  return currentAsset;
-}
-
--(TiBlob *)getAssetThumbnailAsBlob:(id)arg
-{
-
-  ONLY_IN_IOS4_OR_GREATER(getAssetThumbnailAsBlob,nil)
   ENSURE_SINGLE_ARG(arg, NSString);
 
   if (library==nil) {
@@ -917,7 +787,13 @@ if (![TiUtils isIOS4OrGreater]) { \
     }
 
     CGImageRef jpegRepData = [jpegRep fullScreenImage];
-    //CGImageRef jpegRepData = [asset thumbnail];
+
+    if (jpegRep==nil) {
+      NSLog(@"fullScreen representation not found");
+      isDoneRetrievingAsset = YES;
+      currentAsset = nil;
+      return;
+    }
 
     UIImage* newImage = [[UIImage alloc] initWithCGImage:jpegRepData
 					 scale:[jpegRep scale]
@@ -929,10 +805,6 @@ if (![TiUtils isIOS4OrGreater]) { \
     CGFloat newHeight = 75;
     CGFloat newWidth = width * (newHeight / height);
 
-    //    currentAsset = [UIImageResize resizedImage:CGSizeMake(newWidth, newHeight) interpolationQuality:kCGInterpolationDefault image:newImage];
-    //    NSData *jpegData = UIImageJPEGRepresentation([[UIImage alloc] initWithCGImage:jpegRepData], 1.0);
-    //    NSData* jpegData = (NSData*) CGDataProviderCopyData(CGImageGetDataProvider(jpegRepData));
-    
     currentBuffer = [[TiBlob alloc] initWithData:UIImageJPEGRepresentation([UIImageResize resizedImage:CGSizeMake(newWidth, newHeight) 
 											  interpolationQuality:kCGInterpolationDefault 
 											  image:newImage], 1.0)
@@ -944,9 +816,9 @@ if (![TiUtils isIOS4OrGreater]) { \
   [library assetForURL:[NSURL URLWithString:arg]
            resultBlock:assetConverter
            failureBlock: ^(NSError *error) {
-      isDoneRetrievingAsset = YES;
       currentBuffer = nil;
       NSLog(@"Failure");
+      isDoneRetrievingAsset = YES;
     }];
   while (isDoneRetrievingAsset == NO) {
 
@@ -991,7 +863,9 @@ if (![TiUtils isIOS4OrGreater]) { \
       NSArray *objects = [NSArray arrayWithObjects:[group valueForProperty:ALAssetsGroupPropertyName],
                                   [group valueForProperty:ALAssetsGroupPropertyType],
                                   [NSNumber numberWithInteger:[group numberOfAssets]],
-                                  [UIImage imageWithCGImage:[group posterImage]],
+				  [UIImageResize resizedImage:CGSizeMake(55, 55) 
+						 interpolationQuality:kCGInterpolationDefault 
+						 image:[UIImage imageWithCGImage:[group posterImage]]],
                                   nil];
 
       NSDictionary *dictionary = [NSDictionary dictionaryWithObjects:objects forKeys:keys];
@@ -1005,6 +879,8 @@ if (![TiUtils isIOS4OrGreater]) { \
            usingBlock:assetGroupEnumerator
            failureBlock: ^(NSError *error) {
       NSLog(@"Failure");
+      albums = nil;
+      isDoneEnumeratingAlbums = YES;
     }];
 
   while (isDoneEnumeratingAlbums == NO) {
@@ -1035,10 +911,8 @@ if (![TiUtils isIOS4OrGreater]) { \
 
     if(result != NULL) {
       ALAssetRepresentation* rep = [result representationForUTI:@"public.jpeg"];
-      ALAssetRepresentation* defaultRep = [result defaultRepresentation];
 
       NSLog(@"rep: %@", rep);
-      NSLog(@"default rep: %@", defaultRep);
 
       if (rep != NULL) {
         NSLog(@"Adding url: %@", [[rep url] absoluteString]);
@@ -1046,7 +920,8 @@ if (![TiUtils isIOS4OrGreater]) { \
       }
 
     } else {
-      isDoneEnumeratingAlbumAssets = YES;
+      NSLog(@"Asset is NULL");
+      //      isDoneEnumeratingAlbumAssets = YES;
     }
   };
 
@@ -1060,6 +935,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 
     } else {
       NSLog(@"Group NULL");
+      isDoneEnumeratingAlbumAssets = YES;
     }
   };
 
@@ -1067,6 +943,8 @@ if (![TiUtils isIOS4OrGreater]) { \
            usingBlock:assetGroupEnumerator
            failureBlock: ^(NSError *error) {
       NSLog(@"Failure");
+      albumAssets = nil;
+      isDoneEnumeratingAlbums = YES;
     }];
 
   while (isDoneEnumeratingAlbumAssets == NO) {}
