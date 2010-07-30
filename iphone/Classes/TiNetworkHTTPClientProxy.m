@@ -335,7 +335,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	[request setUseCookiePersistence:YES];
 	[request setShowAccurateProgress:YES];
 	[request setShouldUseRFC2616RedirectBehaviour:YES];
-	BOOL keepAlive = [TiUtils boolValue:[self valueForKey:@"enableKeepAlive"] def:YES];
+	BOOL keepAlive = [TiUtils boolValue:[self valueForKey:@"enableKeepAlive"] def:NO];
 	[request setShouldAttemptPersistentConnection:keepAlive];
 	[request setShouldRedirect:YES];
 	[request setShouldPerformCallbacksOnMainThread:NO];
