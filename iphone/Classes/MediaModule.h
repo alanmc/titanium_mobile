@@ -11,6 +11,7 @@
 #import "TiMediaAudioSession.h"
 #import "MediaPlayer/MediaPlayer.h"
 #import "TiMediaMusicPlayer.h"
+#import "AssetsLibrary/AssetsLibrary.h"
 
 @interface MediaModule : TiModule
 <
@@ -24,6 +25,20 @@
 @private
 	// Camera picker
 	UIImagePickerController *picker;
+
+        // Asset Library
+        ALAssetsLibrary* library;
+
+	UIImage *currentAsset;
+        TiBlob *currentBuffer;
+
+        NSMutableArray* albums;
+        NSMutableArray* albumAssets;
+
+        BOOL isDoneEnumeratingAlbums;
+        BOOL isDoneEnumeratingAlbumAssets;
+        BOOL isDoneRetrievingAsset;
+
 	BOOL autoHidePicker;
 	BOOL saveToRoll;
 
@@ -36,6 +51,7 @@
 	
 	// Shared picker bits; OK, since they're modal (and we can perform sanity checks for the necessary bits)
 	BOOL animatedPicker;
+
 	KrollCallback *pickerSuccessCallback;
 	KrollCallback *pickerErrorCallback;
 	KrollCallback *pickerCancelCallback;

@@ -302,10 +302,11 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	
 	request = [[ASIFormDataRequest requestWithURL:url] retain];	
 	[request setDelegate:self];
-    if (timeout) {
-        NSTimeInterval timeoutVal = [timeout doubleValue] / 1000;
-        [request setTimeOutSeconds:timeoutVal];
-    }
+
+	if (timeout) {
+	  NSTimeInterval timeoutVal = [timeout doubleValue] / 1000;
+	  [request setTimeOutSeconds:timeoutVal];
+	}
 	
 	if (onsendstream!=nil)
 	{

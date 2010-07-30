@@ -3060,6 +3060,7 @@
 				GCC_WARN_UNUSED_VARIABLE = NO;
 				HEADER_SEARCH_PATHS = (
 					"${SDKROOT}/usr/include/libxml2",
+                                        "${SDKROOT}/System/Library/Frameworks/AssetsLibrary.framework/Headers/",
 					../headers,
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 3.1;
@@ -3098,6 +3099,7 @@
 				GCC_WARN_UNUSED_VARIABLE = NO;
 				HEADER_SEARCH_PATHS = (
 					"${SDKROOT}/usr/include/libxml2",
+                                        "${SDKROOT}/System/Library/Frameworks/AssetsLibrary.framework/Headers/",
 					../headers,
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 3.1;

@@ -614,8 +614,8 @@ def main(args):
 				contents="TI_VERSION=%s\n"% sdk_version
 				contents+="TI_SDK_DIR=%s\n" % template_dir.replace(sdk_version,'$(TI_VERSION)')
 				contents+="TI_APPID=%s\n" % appid
-				contents+="OTHER_LDFLAGS[sdk=iphoneos4*]=$(inherited) -weak_framework iAd\n"
-				contents+="OTHER_LDFLAGS[sdk=iphonesimulator4*]=$(inherited) -weak_framework iAd\n"
+				contents+="OTHER_LDFLAGS[sdk=iphoneos4*]=$(inherited) -weak_framework iAd -weak_framework AssetsLibrary\n"
+				contents+="OTHER_LDFLAGS[sdk=iphonesimulator4*]=$(inherited) -weak_framework iAd -weak_framework AssetsLibrary\n"
 				contents+="#include \"module\"\n"
 				xcconfig = open(project_xcconfig,'w+')
 				xccontents = xcconfig.read()
