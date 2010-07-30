@@ -198,6 +198,20 @@ USE_VIEW_FOR_AUTO_WIDTH
 	[self evalJS:code];
 }
 
+-(void)clearCookies:(id)domains
+{
+  ENSURE_SINGLE_ARG_OR_NIL(domains, NSArray);
+  
+  NSHTTPCookieStorage* cookieStore = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+  NSHTTPCookie *cookie;
+  
+  for (cookie in [cookieStore cookies]) {
+    if (domains == nil || [domains containsObject:[cookie domain]]) {
+      NSLog(@"[DEBUG] Deleting cookie for domain %@", [cookie domain]);
+      [cookieStore deleteCookie:cookie];
+    }
+  }
+}
 
 @end
 
