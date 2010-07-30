@@ -159,27 +159,50 @@ static NSDictionary* multiValueLabels;
 	for (CFIndex i = 0; i < count; i++) {
 		CFStringRef label = ABMultiValueCopyLabelAtIndex(multiValue, i);
 		CFTypeRef value = ABMultiValueCopyValueAtIndex(multiValue, i);
-		
-		NSString* readableLabel = nil;
-		NSArray* labelKeys = [[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)label];
-		if (labelKeys != nil && ([labelKeys count] > 0)) {
-			readableLabel = [labelKeys objectAtIndex:0];
-		}
-		else {
-			readableLabel = (NSString*)label;
-		}
 
-		if ([dict valueForKey:readableLabel] == nil) {
-			[dict setValue:[NSMutableArray array] forKey:readableLabel];
-		}
+		// Wrap all of this in a try/catch. Accepting/parsing third-party data is risky
+		// and we don't want to crash out app over the inability to parse a single label/value pair
+		@try {
 		
-		if (CFGetTypeID(value) == CFDateGetTypeID()) {
-			// Dates still need special handling - we should make a TiDate object
-			[[dict valueForKey:readableLabel] addObject:[TiUtils UTCDateForDate:(NSDate*)value]];
+		  // If value is nil we need to release and keep going to prevent a crash
+		  if (value == nil) {
+		    CFRelease(label);
+		    CFRelease(value);
+		    continue;
+		  }
+
+		  NSString* readableLabel = nil;
+		  NSArray* labelKeys = [[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)label];
+		  if (labelKeys != nil && ([labelKeys count] > 0)) {
+			readableLabel = [labelKeys objectAtIndex:0];
+		  }
+		  else {
+		    readableLabel = (NSString*)label;
+		  }
+
+		  // Apparently the iphone can potentially return nil labels when synced with certain types
+		  // of contact management servers, such as Exchange. Store these as "unspecified" for now.
+		  // Without this check, calling Ti.Contacts.getAllPeople() crashes the app
+		  if (readableLabel == nil) {
+		    readableLabel = @"unspecified";
+		  }
+		  
+		  if ([dict valueForKey:readableLabel] == nil) {
+		    [dict setValue:[NSMutableArray array] forKey:readableLabel];
+		  }
+		  
+		  if (CFGetTypeID(value) == CFDateGetTypeID()) {
+		    // Dates still need special handling - we should make a TiDate object
+		    [[dict valueForKey:readableLabel] addObject:[TiUtils UTCDateForDate:(NSDate*)value]];
+		  }
+		  else {
+		    // This works as long as 'value' is toll-free bridged, which is (currently) true for all AB property types
+		    [[dict valueForKey:readableLabel] addObject:(id)value];
+		  }
 		}
-		else {
-			// This works as long as 'value' is toll-free bridged, which is (currently) true for all AB property types
-			[[dict valueForKey:readableLabel] addObject:(id)value];
+		@catch (NSException * e)
+		  {
+		  NSLog(@"[DEBUG] Caught NSException parsing contact data: %@", e);
 		}
 		
 		CFRelease(label);
