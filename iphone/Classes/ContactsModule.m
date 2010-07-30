@@ -180,6 +180,20 @@
 	return people;
 }
 
+-(NSNumber*)getPeopleCount:(id)unused
+{
+
+  if (![NSThread isMainThread]) {
+    [self performSelectorOnMainThread:@selector(getPeopleCount:) withObject:unused waitUntilDone:YES];
+    return [returnCache objectForKey:@"peopleCount"];
+  }
+  
+  NSNumber* count = [NSNumber numberWithLong:ABAddressBookGetPersonCount([self addressBook])];
+  
+  [returnCache setObject:count forKey:@"peopleCount"];
+  return count;
+}
+
 -(NSArray*)getAllPeople:(id)unused
 {
 	if (![NSThread isMainThread]) {
