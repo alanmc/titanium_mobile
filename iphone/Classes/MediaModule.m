@@ -702,6 +702,11 @@ if (![TiUtils isIOS4OrGreater]) { \
 
   ENSURE_SINGLE_ARG(arg, NSString);
 
+  if (currentBuffer != nil) {
+    [currentBuffer release];
+    currentBuffer = nil;
+  }
+
   if (library==nil) {
     library=[[ALAssetsLibrary alloc] init];
   }
@@ -736,6 +741,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 							 length:[jpegRep size]]
 				    mimetype:@"image/jpeg"];
     
+    free(dataBuffer);
     isDoneRetrievingAsset = YES;
 
   };
@@ -761,6 +767,11 @@ if (![TiUtils isIOS4OrGreater]) { \
 
   ONLY_IN_IOS4_OR_GREATER(getAssetThumbnail,nil)
   ENSURE_SINGLE_ARG(arg, NSString);
+
+  if (currentBuffer != nil) {
+    [currentBuffer release];
+    currentBuffer = nil;
+  }
 
   if (library==nil) {
     library=[[ALAssetsLibrary alloc] init];
@@ -805,11 +816,15 @@ if (![TiUtils isIOS4OrGreater]) { \
     CGFloat newHeight = 75;
     CGFloat newWidth = width * (newHeight / height);
 
-    currentBuffer = [[TiBlob alloc] initWithData:UIImageJPEGRepresentation([UIImageResize resizedImage:CGSizeMake(newWidth, newHeight) 
-											  interpolationQuality:kCGInterpolationDefault 
-											  image:newImage], 1.0)
+    UIImage* resizedImage = [UIImageResize resizedImage:CGSizeMake(newWidth, newHeight) 
+					   interpolationQuality:kCGInterpolationDefault 
+					   image:newImage];
+    
+    currentBuffer = [[TiBlob alloc] initWithData:UIImageJPEGRepresentation(resizedImage, 1.0)
 				    mimetype:@"image/jpeg"];
     
+    [newImage dealloc];
+
     isDoneRetrievingAsset = YES;
   };
 
