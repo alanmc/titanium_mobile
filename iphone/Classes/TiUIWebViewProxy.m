@@ -10,26 +10,8 @@
 #import "TiUIWebView.h"
 #import "TiUtils.h"
 #import "TiBlob.h"
-#import "TiHost.h"
 
 @implementation TiUIWebViewProxy
-
-#ifdef DEBUG_MEMORY
--(void)dealloc
-{
-	[super dealloc];
-}
-
--(id)retain
-{
-	return [super retain];
-}
-
--(void)release
-{
-	[super release];
-}
-#endif
 
 -(BOOL)shouldDetachViewForSpace
 {
@@ -130,81 +112,24 @@ USE_VIEW_FOR_AUTO_WIDTH
 	[self setNeedsReposition];
 }
 
--(void)windowDidClose
+-(void)clearSession:(id)unused
 {
-	[self _destroy];
-	NSNotification *notification = [NSNotification notificationWithName:kTiContextShutdownNotification object:self];
-	[[NSNotificationCenter defaultCenter] postNotification:notification];
-	[super windowDidClose];
-}
+  NSHTTPCookieStorage* cookieStore = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+  NSHTTPCookie *cookie;
 
--(void)_destroy
-{
-	if (pageToken!=nil)
-	{
-		[[self host] unregisterContext:(id<TiEvaluator>)self forToken:pageToken];
-		RELEASE_TO_NIL(pageToken);
-	}
-	[super _destroy];
-}
-
--(void)setPageToken:(NSString*)pageToken_
-{
-	RELEASE_TO_NIL(pageToken);
-	pageToken = [pageToken_ retain];
-	[[self host] registerContext:self forToken:pageToken];
-}
-
-#pragma mark Evaluator
-
-- (TiHost*)host
-{
-	return [self _host];
-}
-
-- (void)evalFile:(NSString*)file
-{
-	[[self view] performSelectorOnMainThread:@selector(evalFile:) withObject:file waitUntilDone:NO];
-}
-
-- (id)evalJSAndWait:(NSString*)code
-{
-	return [(TiUIWebView*)[self view] evalJSAndWait:code];
-}
-
-- (void)fireEvent:(id)listener withObject:(id)obj remove:(BOOL)yn thisObject:(id)thisObject_
-{
-	[(TiUIWebView*)[self view] fireEvent:listener withObject:obj remove:yn thisObject:thisObject_];
-}
-
-- (id)preloadForKey:(id)key
-{
-}
-
-- (KrollContext*)krollContext
-{
-}
-
-- (void)registerProxy:(id)proxy
-{
-}
-
-- (void)unregisterProxy:(id)proxy
-{
-}
-
--(void)evalJSWithoutResult:(NSString*)code
-{
-	[self evalJS:code];
+  for (cookie in [cookieStore cookies]) {
+    NSLog(@"[DEBUG] Deleting cookie for domain %@", [cookie domain]);
+    [cookieStore deleteCookie:cookie];
+  }
 }
 
 -(void)clearCookies:(id)domains
 {
   ENSURE_SINGLE_ARG_OR_NIL(domains, NSArray);
-  
+
   NSHTTPCookieStorage* cookieStore = [NSHTTPCookieStorage sharedHTTPCookieStorage];
   NSHTTPCookie *cookie;
-  
+
   for (cookie in [cookieStore cookies]) {
     if (domains == nil || [domains containsObject:[cookie domain]]) {
       NSLog(@"[DEBUG] Deleting cookie for domain %@", [cookie domain]);

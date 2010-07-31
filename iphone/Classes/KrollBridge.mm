@@ -72,6 +72,8 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 
 -(void)gc
 {
+	[modules removeAllObjects];
+	[properties removeAllObjects];
 }
 
 -(id)valueForKey:(NSString *)key
@@ -160,8 +162,6 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 												 selector:@selector(didReceiveMemoryWarning:)
 													 name:UIApplicationDidReceiveMemoryWarningNotification  
 												   object:nil]; 
-		
-		proxyLock = [[NSRecursiveLock alloc] init];
 	}
 	return self;
 }
@@ -180,7 +180,6 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 			}
 		}
 	}
-	[self gc];
 }
 
 
@@ -199,20 +198,21 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 
 -(void)removeProxies
 {
-	[proxyLock lock];
 	if (proxies!=nil)
 	{
 		SEL sel = @selector(contextShutdown:);
-		// we have to make a copy since shutdown will possibly remove
-		for (id proxy in [NSArray arrayWithArray:proxies])
+		while ([proxies count] > 0)
 		{
+			id proxy = [proxies objectAtIndex:0];
+			[proxy retain]; // hold while we work
+			[proxies removeObjectAtIndex:0];
 			if ([proxy respondsToSelector:sel])
 			{
 				[proxy contextShutdown:self];
 			}
+			[proxy release];
 		}
 	}
-	[proxyLock unlock];
 	RELEASE_TO_NIL(proxies);
 }
 
@@ -229,7 +229,6 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 	RELEASE_TO_NIL(context);
 	RELEASE_TO_NIL(titanium);
 	RELEASE_TO_NIL(modules);
-	RELEASE_TO_NIL(proxyLock);
 	[super dealloc];
 }
 
@@ -261,7 +260,7 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 	[context start];
 }
 
-- (void)evalJSWithoutResult:(NSString*)code
+- (void)evalJS:(NSString*)code
 {
 	[context evalJS:code];
 }
@@ -401,7 +400,7 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 	
 	NSMutableString *js = [[NSMutableString alloc] init];
 	[js appendString:@"function alert(msg) { Ti.UI.createAlertDialog({title:'Alert',message:msg}).show(); };"];
-	[self evalJSWithoutResult:js];
+	[self evalJS:js];
 	[js release];
 }
 
@@ -416,7 +415,7 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 		shutdownCondition = [condition retain];
 		shutdown = YES;
 		// fire a notification event to our listeners
-		NSNotification *notification = [NSNotification notificationWithName:kTiContextShutdownNotification object:self];
+		NSNotification *notification = [NSNotification notificationWithName:kKrollShutdownNotification object:self];
 		[[NSNotificationCenter defaultCenter] postNotification:notification];
 		
 		[context stop];
@@ -468,7 +467,7 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 		{
 			id target = [preload objectForKey:key];
 			KrollObject *ko = [[KrollObject alloc] initWithTarget:target context:context];
-			[ti setStaticValue:ko forKey:key purgable:NO];
+			[ti setStaticValue:ko forKey:key];
 			[ko release];
 		}
 		[self injectPatches];
@@ -489,7 +488,7 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 	{
 		shutdown = YES;
 		// fire a notification event to our listeners
-		NSNotification *notification = [NSNotification notificationWithName:kTiContextShutdownNotification object:self];
+		NSNotification *notification = [NSNotification notificationWithName:kKrollShutdownNotification object:self];
 		[[NSNotificationCenter defaultCenter] postNotification:notification];
 	}
 	[titanium gc];
@@ -514,27 +513,31 @@ extern BOOL const TI_APPLICATION_ANALYTICS;
 
 - (void)registerProxy:(id)proxy 
 {
-	[proxyLock lock];
 	if (proxies==nil)
 	{ 
-		proxies = [[NSMutableArray alloc] initWithCapacity:50];
+		CFArrayCallBacks callbacks = kCFTypeArrayCallBacks;
+		callbacks.retain = NULL;
+		callbacks.release = NULL; 
+		proxies = (NSMutableArray*)CFArrayCreateMutable(nil, 200, &callbacks);
 	}
 	[proxies addObject:proxy];
-	[proxyLock unlock];
 }
 
 - (void)unregisterProxy:(id)proxy
 {
-	[proxyLock lock];
 	if (proxies!=nil)
 	{
-		[proxies removeObject:proxy];
+		@try {
+                        [proxies removeObject:proxy];
+                }
+                @catch (id theException) {
+                        NSLog(@"Proxy already removed: %@", theException);
+		}
 		if ([proxies count]==0)
 		{
 			RELEASE_TO_NIL(proxies);
 		}
 	}
-	[proxyLock unlock];
 }
 
 -(id)loadCommonJSModule:(NSString*)code withPath:(NSString*)path

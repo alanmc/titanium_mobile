@@ -200,7 +200,7 @@ DEFINE_EXCEPTIONS
 	}
 	else 
 	{
-		[super performSelectorOnMainThread:@selector(removeFromSuperview) withObject:nil waitUntilDone:YES];
+		[self performSelectorOnMainThread:@selector(removeFromSuperview) withObject:nil waitUntilDone:YES];
 	}
 }
 
@@ -254,17 +254,13 @@ DEFINE_EXCEPTIONS
 	virtualParentTransform = CGAffineTransformIdentity;
 	multipleTouches = NO;
 	twoFingerTapIsPossible = NO;
+	touchEnabled = YES;
+	self.userInteractionEnabled = YES;
 	
 	[self updateTouchHandling];
 	 
 	self.backgroundColor = [UIColor clearColor]; 
 	self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    
-    // If a user has not explicitly set whether or not the view interacts, base it on whether or
-    // not it handles events, and if not, set it to the interaction default.
-    if (!changedInteraction) {
-        self.userInteractionEnabled = (handlesTouches || handlesTaps || handlesSwipes) || [self interactionDefault];
-    }
 }
 
 -(void)willSendConfiguration
@@ -289,7 +285,7 @@ DEFINE_EXCEPTIONS
 -(void)setProxy:(TiProxy *)p
 {
 	proxy = p;
-	[proxy setModelDelegate:self];
+	proxy.modelDelegate = self;
 }
 
 -(void)setParent:(TiViewProxy *)p
@@ -384,26 +380,15 @@ DEFINE_EXCEPTIONS
 		{
 			[[(TiViewProxy *)proxy parent] layoutChild:(TiViewProxy *)proxy optimize:NO];
 		}
-		oldSize = CGSizeZero;
 		ApplyConstraintToViewWithinViewWithBounds([(TiViewProxy *)proxy layoutProperties], self, [self superview], bounds, YES);
 		[(TiViewProxy *)[self proxy] clearNeedsReposition];
 		repositioning = NO;
 	}
 }
 
--(void)relayoutOnUIThread:(NSValue*)value
-{
-	CGRect bounds = [value CGRectValue];
-	[self relayout:bounds];
-}
 
 -(void)updateLayout:(LayoutConstraint*)layout_ withBounds:(CGRect)bounds
 {
-	if ([NSThread isMainThread]==NO)
-	{
-		[self performSelectorOnMainThread:@selector(relayoutOnUIThread:) withObject:[NSValue valueWithCGRect:bounds] waitUntilDone:NO];
-		return;
-	}
 	if (animating)
 	{
 #ifdef DEBUG		
@@ -437,10 +422,6 @@ DEFINE_EXCEPTIONS
 		[child retain];
 		[child removeFromSuperview];
 		[self addSubview:child];
-		if ([child isKindOfClass:[TiUIView class]])
-		{
-			[child repositionZIndexIfNeeded];
-		}
 		[child release];
 	}
 }
@@ -450,17 +431,13 @@ DEFINE_EXCEPTIONS
 	return zIndex;
 }
 
--(void)repositionZIndexIfNeeded
-{
-	if ([(TiViewProxy*)proxy needsZIndexRepositioning])
-	{
-		[self repositionZIndex];
-	}
-}
-
 -(void)repositionZIndex
 {
-	[(TiViewProxy*)self.proxy setNeedsZIndexRepositioning];
+	if (parent!=nil && [parent viewAttached])
+	{
+		[self removeFromSuperview];
+		[parent layoutChild:(TiViewProxy *)[self proxy] optimize:NO];
+	}
 }
 
 -(BOOL)animationFromArgument:(id)args
@@ -546,12 +523,6 @@ DEFINE_EXCEPTIONS
 {
 	CGRect r = [self bounds];
 	[rect setRect:r];
-}
-
--(void)didMoveToSuperview
-{
-	[[[TiApp app] controller] repositionSubviews];
-	[super didMoveToSuperview];
 }
 
 #pragma mark Public APIs
@@ -662,8 +633,7 @@ DEFINE_EXCEPTIONS
 
 -(void)setTouchEnabled_:(id)arg
 {
-	self.userInteractionEnabled = [TiUtils boolValue:arg];
-    changedInteraction = YES;
+	touchEnabled = [TiUtils boolValue:arg];
 }
 
 -(void)setBackgroundGradient_:(id)arg
@@ -780,8 +750,6 @@ DEFINE_EXCEPTIONS
 	NSArray * keySequence = [newProxy keySequence];
 	[oldProxy retain];
 	[self retain];
-	
-	[newProxy setReproxying:YES];
 
 	[oldProxy setView:nil];
 	[newProxy setView:self];
@@ -821,8 +789,6 @@ DEFINE_EXCEPTIONS
 	}
 
 	[oldProxy release];
-
-	[newProxy setReproxying:NO];
 	[self release];
 }
 
@@ -896,7 +862,14 @@ DEFINE_EXCEPTIONS
 
 - (BOOL)interactionEnabled
 {
-	return self.userInteractionEnabled;
+	if (touchEnabled)
+	{
+		// we allow the developer to turn off touch with this property but make the default the
+		// result of the internal method interactionDefault. some components (like labels) by default
+		// don't want or need interaction if not explicitly enabled through an addEventListener
+		return [self interactionDefault];
+	}
+	return NO;
 }
 
 - (BOOL)hasTouchableListener
@@ -1165,75 +1138,32 @@ DEFINE_EXCEPTIONS
 
 #pragma mark Listener management
 
--(void)handleListenerAddedWithEvent:(NSString *)event
-{
-	ENSURE_UI_THREAD_1_ARG(event);
-	if ([self proxyHasTouchListener])
-	{
-		handlesTouches = YES;
-	}
-	if ([event hasSuffix:@"tap"])
-	{
-		handlesTaps = YES;
-	}
-	if ([event isEqualToString:@"swipe"])
-	{
-		handlesSwipes = YES;
-	}
-	
-	if (handlesTouches || handlesTaps || handlesSwipes)
-	{
-		self.userInteractionEnabled = YES;
-	}
-	
-	if (handlesTaps)
-	{
-		self.multipleTouchEnabled = YES;
-	}
-}
-
--(void)handleListenerRemovedWithEvent:(NSString *)event
-{
-	ENSURE_UI_THREAD_1_ARG(event);
-	// unfortunately on a remove, we have to check all of them
-	// since we might be removing one but we still have others
-	
-	if (handlesTouches && 
-		[self.proxy _hasListeners:@"touchstart"]==NO &&
-		[self.proxy _hasListeners:@"touchmove"]==NO &&
-		[self.proxy _hasListeners:@"touchcancel"]==NO &&
-		[self.proxy _hasListeners:@"touchend"]==NO &&
-		[self.proxy _hasListeners:@"click"]==NO &&
-		[self.proxy _hasListeners:@"dblclick"]==NO)
-	{
-		handlesTouches = NO;
-	}
-	if (handlesTaps &&
-		[self.proxy _hasListeners:@"singletap"]==NO &&
-		[self.proxy _hasListeners:@"doubletap"]==NO &&
-		[self.proxy _hasListeners:@"twofingertap"]==NO)
-	{
-		handlesTaps = NO;
-	}
-	if (handlesSwipes &&
-		[event isEqualToString:@"swipe"])
-	{
-		handlesSwipes = NO;
-	}
-	
-	if (handlesTaps == NO && handlesTouches == NO)
-	{
-		self.userInteractionEnabled = NO;
-		self.multipleTouchEnabled = NO;
-	}
-}
-
-
 -(void)listenerAdded:(NSString*)event count:(int)count
 {
 	if (count == 1 && [self viewSupportsBaseTouchEvents])
 	{
-		[self handleListenerAddedWithEvent:event];
+		if ([self proxyHasTouchListener])
+		{
+			handlesTouches = YES;
+		}
+		if ([event hasSuffix:@"tap"])
+		{
+			handlesTaps = YES;
+		}
+		if ([event isEqualToString:@"swipe"])
+		{
+			handlesSwipes = YES;
+		}
+		
+		if (handlesTouches || handlesTaps || handlesSwipes)
+		{
+			self.userInteractionEnabled = YES;
+		}
+		
+		if (handlesTaps)
+		{
+			self.multipleTouchEnabled = YES;
+		}
 	}
 }
 
@@ -1241,7 +1171,37 @@ DEFINE_EXCEPTIONS
 {
 	if (count == 0)
 	{
-		[self handleListenerRemovedWithEvent:event];
+		// unfortunately on a remove, we have to check all of them
+		// since we might be removing one but we still have others
+		
+		if (handlesTouches && 
+			[self.proxy _hasListeners:@"touchstart"]==NO &&
+			[self.proxy _hasListeners:@"touchmove"]==NO &&
+			[self.proxy _hasListeners:@"touchcancel"]==NO &&
+			[self.proxy _hasListeners:@"touchend"]==NO &&
+			[self.proxy _hasListeners:@"click"]==NO &&
+			[self.proxy _hasListeners:@"dblclick"]==NO)
+		{
+			handlesTouches = NO;
+		}
+		if (handlesTaps &&
+			[self.proxy _hasListeners:@"singletap"]==NO &&
+			[self.proxy _hasListeners:@"doubletap"]==NO &&
+			[self.proxy _hasListeners:@"twofingertap"]==NO)
+		{
+			handlesTaps = NO;
+		}
+		if (handlesSwipes &&
+			[event isEqualToString:@"swipe"])
+		{
+			handlesSwipes = NO;
+		}
+		
+		if (handlesTaps == NO && handlesTouches == NO)
+		{
+			self.userInteractionEnabled = NO;
+			self.multipleTouchEnabled = NO;
+		}
 	}
 }
 

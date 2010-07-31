@@ -124,7 +124,7 @@ extern NSString * const TI_APPLICATION_ID;
 
 -(void)evaluateJS:(NSString*)js context:(id<TiEvaluator>)evaluator
 {
-	[evaluator evalJSWithoutResult:js];
+	[evaluator evalJS:js];
 }	
 
 -(void)fireEvent:(id)listener withObject:(id)obj remove:(BOOL)yn context:(id<TiEvaluator>)evaluator thisObject:(TiProxy*)thisObject_

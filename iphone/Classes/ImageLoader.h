@@ -70,8 +70,6 @@ typedef enum {
 -(UIImage *)loadImmediateStretchableImage:(NSURL *)url;
 -(UIImage *)loadImmediateStretchableImage:(NSURL *)url withLeftCap:(TiDimension)left topCap:(TiDimension)top;
 
--(CGSize)fullImageSize:(NSURL *)url;
-
 -(ImageLoaderRequest*)loadImage:(NSURL*)url 
 					   delegate:(NSObject<ImageLoaderDelegate>*)delegate 
 					   userInfo:(NSDictionary*)userInfo;

@@ -35,11 +35,8 @@
  */
 
 #define RETURN_FROM_LOAD_PROPERTIES(property,default) \
-{\
-	id temp = [loadProperties valueForKey:property];\
-	[returnCache setValue:(temp ? temp : default) forKey:@"" #property];\
-	return temp ? temp : default; \
-}
+id temp = [loadProperties valueForKey:property];\
+return temp ? temp : default;
 
 #define ONLY_IN_3_2_OR_GREATER(method) \
 if (![TiUtils isiPhoneOS3_2OrGreater]) {\
@@ -54,25 +51,16 @@ if (![TiUtils isiPhoneOS3_2OrGreater]) {\
 @end
 #endif
 
-NSArray* moviePlayerKeys = nil;
+
 
 @implementation TiMediaVideoPlayerProxy
 
 #pragma mark Internal
 
--(NSArray*)keySequence
-{
-	if (moviePlayerKeys == nil) {
-		moviePlayerKeys = [[NSArray alloc] initWithObjects:@"url",@"contentURL",nil];
-	}
-	return moviePlayerKeys;
-}
 
 -(void)_initWithProperties:(NSDictionary *)properties
 {	
 	loadProperties = [[NSMutableDictionary alloc] init];
-	returnCache = [[NSMutableDictionary alloc] init];
-	playerLock = [[NSRecursiveLock alloc] init];
 	[super _initWithProperties:properties];
 }
 
@@ -88,8 +76,6 @@ NSArray* moviePlayerKeys = nil;
 	RELEASE_TO_NIL(movie);
 	RELEASE_TO_NIL(url);
 	RELEASE_TO_NIL(loadProperties);
-	RELEASE_TO_NIL(returnCache);
-	RELEASE_TO_NIL(playerLock);
 	[super _destroy];
 }
 
@@ -158,12 +144,10 @@ NSArray* moviePlayerKeys = nil;
 
 -(MPMoviePlayerController*)player
 {
-	[playerLock lock];
-	if (movie == nil)
+	if (movie==nil)
 	{
 		if (url==nil)
 		{
-			[playerLock unlock];
 			// this is OK - we just need to delay creation of the 
 			// player until after the url is set 
 			return nil;
@@ -181,7 +165,6 @@ NSArray* moviePlayerKeys = nil;
 		}
 #endif
 	}
-	[playerLock unlock];
 	return movie;
 }
 
@@ -605,21 +588,12 @@ NSArray* moviePlayerKeys = nil;
 	}
 }
 
-// Note that if we set the value on the UI thread, we have to return the value from the UI thread -
-// otherwise the request for the value may come in before it's set.  The alternative is to r/w lock
-// when reading properties - maybe we should do that instead.
 -(NSNumber*)fullscreen
 {
 	ONLY_IN_3_2_OR_GREATER(fullscreen)
-	if (![NSThread isMainThread]) {
-		[self performSelectorOnMainThread:@selector(fullscreen) withObject:nil waitUntilDone:YES];
-		return [returnCache valueForKey:@"fullscreen"];
-	}
 	
 	if (movie != nil) {
-		NSNumber* result = NUMBOOL([[self player] isFullscreen]);
-		[returnCache setValue:result forKey:@"fullscreen"];
-		return result;
+		return NUMBOOL([[self player] isFullscreen]);
 	}
 	else {
 		RETURN_FROM_LOAD_PROPERTIES(@"fullscreen",NUMBOOL(NO));
@@ -733,11 +707,9 @@ NSArray* moviePlayerKeys = nil;
 		BOOL fs = [TiUtils boolValue:value];
 		[[self player] setFullscreen:fs];
 	}
-	
-	// Movie players are picky.  You can't set the fullscreen value until
-	// the movie's size has been determined, so we always have to cache the value - just in case
-	// it's set before then.
-	[loadProperties setValue:value forKey:@"fullscreen"];
+	else {
+		[loadProperties setValue:value forKey:@"fullscreen"];
+	}
 }
 #endif
 
@@ -1036,7 +1008,6 @@ NSArray* moviePlayerKeys = nil;
 
 -(void)handleNaturalSizeAvailableNotification:(NSNotification*)note
 {
-	[self setFullscreen:[loadProperties valueForKey:@"fullscreen"]];
 	if ([self _hasListeners:@"naturalSizeAvailable"])
 	{
 		NSDictionary *event = [NSDictionary dictionaryWithObject:[self naturalSize] forKey:@"naturalSize"];

@@ -45,8 +45,6 @@
 		[spinner setAlpha:0];
 		[UIView commitAnimations];
 	}
-	
-	loaded = YES;
 }
 
 -(void)setMovie:(MPMoviePlayerController*)controller_
@@ -66,6 +64,10 @@
 	[TiUtils setView:[controller view] positionRect:self.bounds];
 	[self addSubview:[controller view]];
 	[self sendSubviewToBack:[controller view]];
+
+	// show a spinner while the movie is loading so that the user
+	// will know something is happening...
+	RELEASE_TO_NIL(spinner);
 	
 	TiColor *bgcolor = [TiUtils colorValue:[self.proxy valueForKey:@"backgroundColor"]];
 	UIActivityIndicatorViewStyle style = UIActivityIndicatorViewStyleGray;
@@ -78,28 +80,14 @@
 			style = UIActivityIndicatorViewStyleWhite;
 		} 
 	}
-
-	// show a spinner while the movie is loading so that the user
-	// will know something is happening...
-
-	if (!loaded) {
-		if (spinner == nil)
-		{
-			spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:style];
-			spinner.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
-			[spinner sizeToFit];
-			[spinner setHidesWhenStopped:NO];
-			
-			[spinner startAnimating];
-			spinner.center = [[controller view] center];
-			[[controller view] addSubview:spinner];
-		}
-		else if ([spinner activityIndicatorViewStyle] != style)
-		{
-			[spinner setActivityIndicatorViewStyle:style];
-			[spinner sizeToFit];
-		}
-	}
+	
+	spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:style];
+	spinner.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+	[spinner sizeToFit];
+	[spinner setHidesWhenStopped:NO];
+	[spinner startAnimating];
+	spinner.center = [[controller view] center];
+	[[controller view] addSubview:spinner];
 }
 
 -(void)dealloc

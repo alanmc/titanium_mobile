@@ -304,6 +304,7 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 	[request setDelegate:self];
 
 	if (timeout) {
+	  NSLog(@"[DEBUG] Found Timeout: %@", timeout);
 	  NSTimeInterval timeoutVal = [timeout doubleValue] / 1000;
 	  [request setTimeOutSeconds:timeoutVal];
 	}
@@ -427,7 +428,6 @@ extern NSString * const TI_APPLICATION_DEPLOYTYPE;
 					[request appendPostData:data];
 				}
 			}
-			//TODO: support TiFile post 1.4
 		}
 	}
 	

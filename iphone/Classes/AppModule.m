@@ -42,20 +42,6 @@ extern NSString * const TI_APPLICATION_GUID;
 		appListeners = [[NSMutableDictionary alloc] init];
 	}
 	
-	id<TiEvaluator> context = [self executionContext]==nil ? [self pageContext] : [self executionContext];
-	ListenerEntry *entry = [[ListenerEntry alloc] initWithListener:listener context:context proxy:self];
-
-	
-	if ([listener isKindOfClass:[KrollCallback class]])
-	{
-		((KrollCallback*)listener).type = type;
-	}
-	else 
-	{
-		entry.type = type;
-	}
-
-	
 	NSMutableArray *l = [appListeners objectForKey:type];
 	if (l==nil)
 	{
@@ -63,6 +49,7 @@ extern NSString * const TI_APPLICATION_GUID;
 		[appListeners setObject:l forKey:type];
 		[l release];
 	}
+	ListenerEntry *entry = [[ListenerEntry alloc] initWithListener:listener context:[self executionContext] proxy:self type:type];
 	[l addObject:entry];
 	[entry release];
 }
@@ -85,16 +72,11 @@ extern NSString * const TI_APPLICATION_GUID;
 			if ([listener isEqual:[entry listener]]) //NSNumber does the right thing with this too.
 			{
 				[l removeObject:entry];	//It's safe to modify the array as long as you break right after.
-				needsScanning = [l count]>0;
+				needsScanning = YES;
 				break;
 			}
 		}
 	} while (needsScanning);
-	
-	if ([appListeners count]==0)
-	{
-		RELEASE_TO_NIL(appListeners);
-	}
 	
 	[[self _host] removeListener:listener context:pageContext];
 } 
@@ -115,15 +97,15 @@ extern NSString * const TI_APPLICATION_GUID;
 
 -(void)fireEvent:(NSArray*)args
 {
-	if (appListeners!=nil)
-	{
-		id type = [args objectAtIndex:0];
-		id obj = [args count] > 1 ? [args objectAtIndex:1] : nil;
-		
+	id type = [args objectAtIndex:0];
+	id obj = [args count] > 1 ? [args objectAtIndex:1] : nil;
+	
 #ifdef DEBUG
-		NSLog(@"[DEBUG] fire app event: %@ with %@",type,obj);
+	NSLog(@"[DEBUG] fire app event: %@ with %@",type,obj);
 #endif
-		
+	
+	if (appListeners!=nil && [appListeners count] > 0)
+	{
 		NSArray *array = [appListeners objectForKey:type];
 		
 		if (array!=nil && [array count] > 0)
@@ -221,50 +203,9 @@ extern NSString * const TI_APPLICATION_GUID;
 	}
 }
 
--(void)willShutdownContext:(NSNotification*)note
-{
-	// we have to check and see if this context has any listeners
-	// that are registered at the global scope and that haven't been
-	// removed and if so, we need to remove them since their context
-	// is toast.
-	if (appListeners!=nil)
-	{
-		NSMutableArray *found = [NSMutableArray array];
-		id context = [note object];
-		for (NSString *type in appListeners)
-		{
-			for (ListenerEntry *entry in [appListeners objectForKey:type])
-			{
-				if ([entry context] == context)
-				{
-					id listener = [entry listener];
-					if ([listener isKindOfClass:[KrollCallback class]])
-					{
-						[found addObject:[NSArray
-										  arrayWithObjects:((KrollCallback*)listener).type,listener,nil]];
-					}
-					else 
-					{
-						[found addObject:[NSArray
-									   arrayWithObjects:[entry type],listener,nil]];
-					}
-				}
-			}
-		}
-		if ([found count]>0)
-		{
-			for (NSArray *a in found)
-			{
-				[self removeEventListener:a];
-			}
-		}
-	}
-}
-
 -(void)startup
 {
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(willShutdown:) name:kTiWillShutdownNotification object:nil];
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(willShutdownContext:) name:kTiContextShutdownNotification object:nil];
 	[super startup];
 }
 
@@ -272,7 +213,6 @@ extern NSString * const TI_APPLICATION_GUID;
 {
 	// make sure we force any changes made on shutdown
 	[[NSUserDefaults standardUserDefaults] synchronize];
-	[[NSNotificationCenter defaultCenter] removeObserver:self];
 	[super shutdown:sender];
 }
 

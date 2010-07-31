@@ -8,7 +8,6 @@
 #import "TiEvaluator.h"
 #import "KrollCallback.h"
 #import "KrollObject.h"
-#import <pthread.h>
 
 @class KrollBridge;
 
@@ -68,8 +67,8 @@ void DoProxyDelegateReadValuesWithKeysFromProxy(UIView<TiProxyDelegate> * target
 	id<TiProxyDelegate> modelDelegate;
 	NSURL *baseURL;
 	NSString *krollDescription;
-	pthread_rwlock_t listenerLock;
-	BOOL reproxying;
+	NSMutableDictionary *contextListeners;
+	NSRecursiveLock *destroyLock;
 @protected
 	BOOL	ignoreValueChanged;	//This is done only at initialization where we know the dynprops were properly set by _initWithProperties.
 	NSMutableDictionary *dynprops;
@@ -92,6 +91,8 @@ void DoProxyDelegateReadValuesWithKeysFromProxy(UIView<TiProxyDelegate> * target
 -(BOOL)_hasListeners:(NSString*)type;
 -(void)_fireEventToListener:(NSString*)type withObject:(id)obj listener:(KrollCallback*)listener thisObject:(TiProxy*)thisObject_;
 -(id)_proxy:(TiProxyBridgeType)type;
+-(void)_willChangeValue:(id)property value:(id)value;
+-(void)_didChangeValue:(id)property value:(id)value;
 -(void)_contextDestroyed;
 -(void)contextWasShutdown:(id<TiEvaluator>)context;
 -(TiHost*)_host;
@@ -106,8 +107,6 @@ void DoProxyDelegateReadValuesWithKeysFromProxy(UIView<TiProxyDelegate> * target
 -(void)contextShutdown:(id)sender;
 -(id)toString:(id)args;
 -(BOOL)destroyed;
--(void)setReproxying:(BOOL)yn;
--(BOOL)inReproxy;
 
 #pragma mark Public 
 -(id<NSFastEnumeration>)allKeys;

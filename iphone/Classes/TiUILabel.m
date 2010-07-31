@@ -85,6 +85,7 @@
 	[super setCenter:CGPointMake(floorf(newCenter.x), floorf(newCenter.y))];
 }
 
+
 -(void)frameSizeChanged:(CGRect)frame bounds:(CGRect)bounds
 {
 	[label setFrame:bounds];
@@ -135,14 +136,12 @@
 
 -(void)setColor_:(id)color
 {
-	UIColor * newColor = [[TiUtils colorValue:color] _color];
-	[[self label] setTextColor:(newColor != nil)?newColor:[UIColor darkTextColor]];
+	[[self label] setTextColor:[[TiUtils colorValue:color] _color]];
 }
 
 -(void)setHighlightedColor_:(id)color
 {
-	UIColor * newColor = [[TiUtils colorValue:color] _color];
-	[[self label] setHighlightedTextColor:(newColor != nil)?newColor:[UIColor lightTextColor]];
+	[[self label] setHighlightedTextColor:[[TiUtils colorValue:color] _color]];
 }
 
 -(void)setFont_:(id)font

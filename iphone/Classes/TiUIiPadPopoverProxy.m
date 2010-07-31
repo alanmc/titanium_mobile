@@ -14,7 +14,7 @@
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2
 
 @implementation TiUIiPadPopoverProxy
-@synthesize viewController, popoverView;
+@synthesize viewController;
 
 #pragma mark Setup
 -(void)dealloc
@@ -22,7 +22,6 @@
 	RELEASE_TO_NIL(viewController);
 	RELEASE_TO_NIL(navigationController);
 	RELEASE_TO_NIL(popoverController);
-	RELEASE_TO_NIL(popoverView);
 	[super dealloc];
 }
 
@@ -35,15 +34,15 @@
 	}
 	ENSURE_UI_THREAD_1_ARG(properties);
 	
-	BOOL animated_ = [TiUtils boolValue:@"animated" properties:properties def:YES];
+	BOOL animated = [TiUtils boolValue:@"animated" properties:properties def:YES];
 	
 	UINavigationItem * ourItem = [viewController navigationItem];
 
 	[ourItem setTitle:[TiUtils stringValue:[self valueForKey:@"title"]]];
-	[ourItem setLeftBarButtonItem:[[self valueForKey:@"leftNavButton"] barButtonItem] animated:animated_];
-	[ourItem setRightBarButtonItem:[[self valueForKey:@"rightNavButton"] barButtonItem] animated:animated_];
+	[ourItem setLeftBarButtonItem:[[self valueForKey:@"leftNavButton"] barButtonItem] animated:animated];
+	[ourItem setRightBarButtonItem:[[self valueForKey:@"rightNavButton"] barButtonItem] animated:animated];
 	
-	[[self navigationController] setNavigationBarHidden:[TiUtils boolValue:[self valueForKey:@"navBarHidden"]] animated:animated_];
+	[[self navigationController] setNavigationBarHidden:[TiUtils boolValue:[self valueForKey:@"navBarHidden"]] animated:animated];
 
 }
 
@@ -71,13 +70,12 @@
 -(void)updateContentSize
 {
 	CGSize newSize = [self contentSize];
-	BOOL animated_ = [[self popoverController] isPopoverVisible];
-#ifdef DEBUG	
+	BOOL animated = [[self popoverController] isPopoverVisible];
 	NSLog(@"Going From %fx%f",[popoverController popoverContentSize].width,[popoverController popoverContentSize].height);
 
-	NSLog(@"Going to set size to %fx%f with animated %d",newSize.width,newSize.height,animated_);
-#endif
-	[popoverController setPopoverContentSize:newSize animated:animated_];
+	NSLog(@"Going to set size to %fx%f with animated %d",newSize.width,newSize.height,animated);
+
+	[popoverController setPopoverContentSize:newSize animated:YES];
 	[self layoutChildren:NO];
 }
 
@@ -121,7 +119,7 @@
 -(void)setLeftNavButton:(id)item withObject:(id)properties
 {
 	ENSURE_SINGLE_ARG_OR_NIL(item,TiViewProxy);
-	[self replaceValue:item forKey:@"leftNavButton" notification:NO];
+	[self replaceValue:item forKey:@"rightNavButton" notification:NO];
 	[self refreshTitleBarWithObject:properties];
 }
 
@@ -194,82 +192,49 @@
 	ENSURE_UI_THREAD_1_ARG(args);
 	
 	NSDictionary *rectProps = [args objectForKey:@"rect"];
-	animated = [TiUtils boolValue:@"animated" properties:args def:YES];
-	directions = [TiUtils intValue:[self valueForKey:@"arrowDirection"] def:UIPopoverArrowDirectionAny];
-	[self setPopoverView:[args objectForKey:@"view"]];
+	BOOL animated = [TiUtils boolValue:@"animated" properties:args def:YES];
+	UIPopoverArrowDirection directions = [TiUtils intValue:[self valueForKey:@"arrowDirection"] def:UIPopoverArrowDirectionAny];
+	
+	TiViewProxy *proxy = [args objectForKey:@"view"];
 
-	if (rectProps!=nil)
-	{
-		popoverRect = [TiUtils rectValue:rectProps];
-	}
-	else
-	{
-		popoverRect = CGRectZero;
-	}
 
-	isShowing = YES;
 	[self retain];
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updatePopover:) name:UIApplicationWillChangeStatusBarOrientationNotification object:nil];
-	[self updatePopoverNow];
-}
-
--(void)updatePopover:(NSNotification *)notification;
-{
-	[self performSelector:@selector(updatePopoverNow) withObject:nil afterDelay:[[UIApplication sharedApplication] statusBarOrientationAnimationDuration]];
-}
-
--(void)updatePopoverNow
-{
 	[self updateContentSize];
 
-	if ([popoverView isUsingBarButtonItem])
-	{
-		[[self popoverController] presentPopoverFromBarButtonItem:[popoverView barButtonItem] permittedArrowDirections:directions animated:animated];
+	if ([proxy isUsingBarButtonItem]) {
+		[[self popoverController] presentPopoverFromBarButtonItem:[proxy barButtonItem] permittedArrowDirections:directions animated:animated];
 	}
 	else
 	{
-		UIView *view = [popoverView view];
+		UIView *view = [proxy view];
 		
 		CGRect rect;
-		if (CGRectIsEmpty(popoverRect))
+		if (rectProps!=nil)
 		{
-			rect = [view bounds];
+			rect = [TiUtils rectValue:rectProps];
 		}
 		else
 		{
-			rect = popoverRect;
+			rect = [view frame];
 		}
 		
-		[[self popoverController] presentPopoverFromRect:rect inView:view permittedArrowDirections:directions animated:animated];
+		[[self popoverController] presentPopoverFromRect:rect inView:[view superview] permittedArrowDirections:directions animated:animated];
 	}
 }
-
 
 -(void)hide:(id)args
 {
 	ENSURE_SINGLE_ARG_OR_NIL(args,NSDictionary);
 
 	ENSURE_UI_THREAD_1_ARG(args);
-	BOOL animated_ = [TiUtils boolValue:@"animated" properties:args def:YES];
-	[[self popoverController] dismissPopoverAnimated:animated_];
-
-//As of iPhone OS 3.2, calling dismissPopoverAnimated does NOT call didDismissPopover. So we have to do it ourselves...
-	[self popoverControllerDidDismissPopover:popoverController];
+	BOOL animated = [TiUtils boolValue:@"animated" properties:args def:YES];
+	[[self popoverController] dismissPopoverAnimated:animated];
 }
 
 #pragma mark Delegate methods
 - (void)popoverControllerDidDismissPopover:(UIPopoverController *)popoverController
 {
-//As of iPhone OS 3.2, calling dismissPopoverAnimated does NOT call didDismissPopover. So we have to do it ourselves.
-//HOWEVER, in the event that this IS fixed, we don't want this called one too many times, thus isShowing is to protect
-//against that.
-	if (!isShowing)
-	{
-		return;
-	}
-	isShowing = NO;
 	[self fireEvent:@"hide" withObject:nil]; //Checking for listeners are done by fireEvent anyways.
-	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillChangeStatusBarOrientationNotification object:nil];
 	[self performSelector:@selector(release) withObject:nil afterDelay:0.5];
 }
 

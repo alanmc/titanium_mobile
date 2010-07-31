@@ -90,6 +90,18 @@
 	return self;
 }
 
+-(void)dealloc
+{
+	[[TiMediaAudioSession sharedSession] stopAudioSession];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0	
+	if ([TiUtils isIOS4OrGreater])
+	{
+		[[NSNotificationCenter defaultCenter] removeObserver:self];
+	}
+#endif	
+	[super dealloc];
+}
+
 -(void)configurationSet
 {
 	if (url!=nil)
@@ -111,15 +123,6 @@
 		[player stop];
 		[player setDelegate:nil];
 	}
-	
-	[[TiMediaAudioSession sharedSession] stopAudioSession];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0	
-	if ([TiUtils isIOS4OrGreater])
-	{
-		[[NSNotificationCenter defaultCenter] removeObserver:self];
-	}
-#endif	
-	
 	RELEASE_TO_NIL(player);
 	RELEASE_TO_NIL(url);
 	RELEASE_TO_NIL(tempFile);

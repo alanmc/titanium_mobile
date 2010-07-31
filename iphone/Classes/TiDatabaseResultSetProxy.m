@@ -28,15 +28,6 @@
 	[super dealloc];
 }
 
--(void)_destroy
-{ 
-	if (database!=nil)
-	{
-		[self performSelector:@selector(close:) withObject:nil];
-	}
-	[super _destroy];
-}
-
 -(id)initWithResults:(PLSqliteResultSet*)results_ database:(TiDatabaseProxy*)database_ pageContext:(id<TiEvaluator>)context
 {
 	if (self = [self _initWithPageContext:context])

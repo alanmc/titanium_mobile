@@ -21,7 +21,6 @@
     
     NSCondition* configureCondition;
 	
-    BOOL stripTerminator;
 	SocketMode mode;
 	CFRunLoopSourceRef socketRunLoop;
 }
@@ -36,8 +35,6 @@
 @property(readonly, nonatomic) NSNumber* port;
 @property(readonly, nonatomic) NSNumber* mode;
 @property(readonly, nonatomic, getter=isValid) NSNumber* valid;
-
-@property(nonatomic, assign) NSNumber* stripTerminator;
 
 @end
 

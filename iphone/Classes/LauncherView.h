@@ -90,8 +90,6 @@
 
 - (void)launcherViewDidEndEditing:(LauncherView*)launcher;
 
-- (BOOL)launcherViewShouldWobble:(LauncherView*)launcher;
-
 @end
 
 #endif

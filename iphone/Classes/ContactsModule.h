@@ -34,12 +34,12 @@
 -(void)save:(id)unusued;
 -(void)revert:(id)unused;
 -(void)showContacts:(id)args;
--(NSNumber*)getPeopleCount:(id)unused;
 -(TiContactsPerson*)getPersonByID:(id)arg;
 -(NSArray*)getPeopleWithName:(id)arg;
 -(NSArray*)getAllPeople:(id)unused;
 -(TiContactsPerson*)createPerson:(id)arg;
 -(void)removePerson:(id)arg;
+-(NSNumber*)getPeopleCount:(id)unused;
 
 @property (nonatomic,readonly) NSNumber* CONTACTS_KIND_PERSON;
 @property (nonatomic,readonly) NSNumber* CONTACTS_KIND_ORGANIZATION;

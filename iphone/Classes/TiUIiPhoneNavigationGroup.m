@@ -138,6 +138,10 @@
 	TiWindowViewController *wincontroller = (TiWindowViewController*)viewController;
 	TiWindowProxy *newWindow = [wincontroller proxy];
 	[self setVisibleProxy:newWindow];
+	if (newWindow==current || newWindow==root)
+	{
+		return;
+	}
 	
 	if (newWindow!=current)
 	{

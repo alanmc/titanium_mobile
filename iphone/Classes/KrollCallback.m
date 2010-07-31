@@ -17,7 +17,7 @@ static NSLock *callbackLock;
 
 @implementation KrollCallback
 
-@synthesize context, type;
+@synthesize context;
 
 +(void)shutdownContext:(KrollContext*)context
 {
@@ -58,7 +58,6 @@ static NSLock *callbackLock;
 	[callbacks removeObject:self];
 	[callbackLock unlock];
 
-	[type release];
 	TiValueUnprotect(jsContext, function);
 	TiValueUnprotect(jsContext, thisObj);
 	function = NULL;
@@ -77,15 +76,10 @@ static NSLock *callbackLock;
 	{
 		return NO;
 	}
-	if ([anObject isKindOfClass:[KrollCallback class]]==NO)
-	{
-		return NO;
-	}
-	KrollCallback *otherCallback = (KrollCallback*)anObject;
-	if (function!=NULL)
+	if (function!=NULL && [anObject isKindOfClass:[KrollCallback class]])
 	{
 		TiObjectRef ref1 = function;
-		TiObjectRef ref2 = [otherCallback function];
+		TiObjectRef ref2 = [(KrollCallback*)anObject function];
 		return TiValueIsStrictEqual(jsContext,ref1,ref2);
 	}
 	return NO;

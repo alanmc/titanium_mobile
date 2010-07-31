@@ -411,8 +411,6 @@ return value;\
 
 #define VAL_OR_NSNULL(foo)	(((foo) != nil)?((id)foo):[NSNull null])
 
-
-
 NSData * dataWithHexString (NSString * hexString);
 NSString * hexString (NSData * thedata);
 
@@ -425,7 +423,7 @@ typedef enum {
 } TiNetworkConnectionState;
 
 
-extern NSString * const kTiContextShutdownNotification;
+extern NSString * const kKrollShutdownNotification;
 extern NSString * const kTiWillShutdownNotification;
 extern NSString * const kTiShutdownNotification;
 extern NSString * const kTiSuspendNotification;
@@ -451,6 +449,5 @@ extern NSString * const kTiRemoteControlNotification;
 #ifndef ASI_AUTOUPDATE_NETWORK_INDICATOR
 	#define REACHABILITY_20_API 1
 #endif
-
 
 #endif

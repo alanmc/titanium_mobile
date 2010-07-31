@@ -13,53 +13,24 @@
 
 #import "TiSplitViewController.h"
 #import "TiViewProxy.h"
-#import "TiUIiPhoneNavigationGroupProxy.h"
-#import <MessageUI/MessageUI.h>
 
 @implementation TiSplitViewController
-@synthesize proxy, master, detail;
 
--(id)initWithRootController:(TiRootViewController *)rootController 
-				masterProxy:(TiViewProxy*)master_ 
-				detailProxy:(TiViewProxy*)detail_ 
-				 splitProxy:(TiUIiPadSplitWindowProxy*)split_
+-(id)initWithRootController:(TiRootViewController *)rootController masterProxy:(TiViewProxy*)master_ detailProxy:(TiViewProxy*)detail_
 {
 	if (self = [super init]) {
 		titaniumRoot = [rootController retain];
-		proxy = split_;
 		
-		// In order for the split view to render correctly, we have to enforce the window's orientation modes
-		// before setting up the view controllers.  Very finnicky about when the containing mystery views
-		// are positioned!
-		//lastOrientation = [[UIDevice currentDevice] orientation];
-		[self enforceOrientationModesFromWindow:(TiWindowProxy*)split_ rotate:YES];
-		
-		// Split view throws a hissyfit unless its detail and master are nav groups, apparently!
-		UINavigationController* leftNav;
-		UINavigationController* rightNav;
-
-		// Quick hack; OK to do this even if we're stashing nav group proxies, because we're just
-		// using these to resposition (and create the nav controller if necessary)
 		master = [[TiViewController alloc] initWithViewProxy:master_];
 		detail = [[TiViewController alloc] initWithViewProxy:detail_];
 		
-		if ([master_ isKindOfClass:[TiUIiPhoneNavigationGroupProxy class]]) {
-			leftNav = [[(TiUIiPhoneNavigationGroupProxy*)master_ controller] retain];
-		}
-		else {
-			leftNav = [[UINavigationController alloc] initWithRootViewController:master];		
-			leftNav.navigationBarHidden = YES;
-		}
+		UINavigationController *leftNav = [[UINavigationController alloc] initWithRootViewController:master];
+		UINavigationController *rightNav = [[UINavigationController alloc] initWithRootViewController:detail];
 		
-		if ([detail_ isKindOfClass:[TiUIiPhoneNavigationGroupProxy class]]) {
-			rightNav = [[(TiUIiPhoneNavigationGroupProxy*)detail_ controller] retain];
-		}
-		else {
-			rightNav = [[UINavigationController alloc] initWithRootViewController:detail];
-			rightNav.navigationBarHidden = YES;  
-		}
+		leftNav.navigationBarHidden = YES;
+		rightNav.navigationBarHidden = YES;
 		
-		self.viewControllers = [NSArray arrayWithObjects:leftNav, rightNav ,nil];
+		self.viewControllers = [NSArray arrayWithObjects:leftNav,rightNav,nil];
 
 		[leftNav release];
 		[rightNav release];
@@ -86,8 +57,33 @@
 
 -(void)loadView
 {
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didOrientNotify:) name:UIDeviceOrientationDidChangeNotification object:nil];
 	[[NSNotificationCenter defaultCenter] removeObserver:titaniumRoot name:UIDeviceOrientationDidChangeNotification object:nil];
 	[super loadView];
+}
+
+-(void)viewDidLoad
+{
+	[self willAnimateRotationToInterfaceOrientation:[[UIDevice currentDevice] orientation] duration:0];
+}
+
+-(void)didOrientNotify:(NSNotification *)notification
+{
+	UIInterfaceOrientation newOrientation = [[UIDevice currentDevice] orientation];
+	if (lastOrientation == 0)
+	{ //This is when the application first starts. statusBarOrientation lies at the beginning,
+		//And device orientation is 0 until this notification.
+		[self willAnimateRotationToInterfaceOrientation:newOrientation duration:0];
+		return;
+	}
+	
+	if ((lastOrientation!=newOrientation) && [self shouldAutorotateToInterfaceOrientation:newOrientation])
+	{ //This is for when we've forced an orientation that was not what the device was, and
+		//Now we want to return to it. Because newOrientation and windowOrientation are identical
+		//The iPhone OS wouldn't send this method.
+		[self willAnimateRotationToInterfaceOrientation:newOrientation duration:[[UIApplication sharedApplication] statusBarOrientationAnimationDuration]];
+	}
+	
 }
 
 -(void)repositionSubviews
@@ -152,52 +148,16 @@
 	[self manuallyRotateToOrientation:newOrientation duration:[[UIApplication sharedApplication] statusBarOrientationAnimationDuration]];
 }
 
--(void)setOrientationModes:(NSArray *)newOrientationModes
+- (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
 {
-	for (int i=0; i<MAX_ORIENTATIONS; i++)
-	{
-		allowedOrientations[i] = NO;
-	}
-	
-	BOOL noOrientations = YES;
-	if (newOrientationModes != nil && ![newOrientationModes isKindOfClass:[NSNull class]]) {
-		for (id mode in newOrientationModes)
-		{
-			UIInterfaceOrientation orientation = [TiUtils orientationValue:mode def:-1];
-			switch (orientation)
-			{
-				case UIDeviceOrientationPortrait:
-				case UIDeviceOrientationPortraitUpsideDown:
-				case UIDeviceOrientationLandscapeLeft:
-				case UIDeviceOrientationLandscapeRight:
-					allowedOrientations[orientation] = YES;
-					noOrientations = NO;
-					break;
-				case -1:
-					break;
-				default:
-					NSLog(@"[WARN] An invalid orientation was requested. Ignoring.");
-					break;
-			}
-		}
-	}
-	
-	if (noOrientations)
-	{
-		allowedOrientations[UIInterfaceOrientationPortrait] = YES;
-		if ([TiUtils isIPad])
-		{
-			allowedOrientations[UIInterfaceOrientationPortraitUpsideDown] = YES;
-			allowedOrientations[UIInterfaceOrientationLandscapeLeft] = YES;
-			allowedOrientations[UIInterfaceOrientationLandscapeRight] = YES;
-		}
-	}
+	VerboseLog(@"Rotating to %d (Landscape? %d)",toInterfaceOrientation,UIInterfaceOrientationIsLandscape(toInterfaceOrientation));
+	[self manuallyRotateToOrientation:toInterfaceOrientation duration:duration];
+	[super willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation 
 {
-	orientationRequestTimes[interfaceOrientation] = [NSDate timeIntervalSinceReferenceDate];
-	return allowedOrientations[interfaceOrientation];
+	return [titaniumRoot shouldAutorotateToInterfaceOrientation:interfaceOrientation];
 }
 
 -(void)refreshOrientationModesIfNeeded:(TiWindowProxy *)oldCurrentWindow
@@ -205,88 +165,14 @@
 	[titaniumRoot refreshOrientationModesIfNeeded:oldCurrentWindow];
 }
 
--(void)enforceOrientationModesFromWindow:(TiWindowProxy *) newCurrentWindow rotate:(BOOL)yn
-{	
-	Class arrayClass = [NSArray class];
-	Class windowClass = [TiWindowProxy class];
-	SEL proxySel = @selector(proxy);
-	
-	NSArray * candidateOrientationModes = [newCurrentWindow valueForKey:@"orientationModes"];
-
-	[self setOrientationModes:candidateOrientationModes];
-
-	if (yn) {
-		UIInterfaceOrientation requestedOrientation = [[UIApplication sharedApplication] statusBarOrientation];
-		NSTimeInterval latestRequest = 0.0;
-		for (int i=0; i<MAX_ORIENTATIONS; i++)
-		{
-			if (allowedOrientations[i] && (orientationRequestTimes[i]>latestRequest))
-			{
-				requestedOrientation = i;
-				latestRequest = orientationRequestTimes[i];
-			}
-		}
-		[super willRotateToInterfaceOrientation:requestedOrientation duration:0.0];
-		[self manuallyRotateToOrientation:requestedOrientation duration:0.0];
-	}
-}
-
 -(void)windowFocused:(UIViewController*)focusedViewController
 {
-	if ([focusedViewController isKindOfClass:[UINavigationController class]] && ![focusedViewController isKindOfClass:[MFMailComposeViewController class]])
-	{
-		UIViewController * topViewController = [(UINavigationController *)focusedViewController topViewController];
-		if (topViewController != nil)
-		{
-			focusedViewController = topViewController;
-		}
-	}
-	
-	TiWindowProxy * focusedProxy = nil;
-	if ([focusedViewController respondsToSelector:@selector(proxy)])
-	{
-		focusedProxy = (TiWindowProxy *)[(id)focusedViewController proxy];
-	}
-	
-	if (windowViewControllers==nil)
-	{
-		windowViewControllers = [[NSMutableArray alloc] initWithObjects:focusedViewController,nil];
-	}
-	else
-	{
-		[windowViewControllers addObject:focusedViewController];
-	}
-	
-	[self enforceOrientationModesFromWindow:(id)focusedProxy rotate:YES];	
+	// No-op on split views
 }
 
 -(void)windowClosed:(UIViewController *)closedViewController
 {
-	if ([closedViewController isKindOfClass:[UINavigationController class]] && ![closedViewController isKindOfClass:[MFMailComposeViewController class]])
-	{
-		UIViewController * topViewController = [(UINavigationController *)closedViewController topViewController];
-		if (topViewController != nil)
-		{
-			closedViewController = topViewController;
-		}
-	}
-	
-	BOOL focusChanged = [windowViewControllers lastObject] == closedViewController;
-	[[closedViewController retain] autorelease];
-	[windowViewControllers removeObject:closedViewController];
-	if (!focusChanged)
-	{
-		closedViewController=nil;
-		return; //Exit early. We're done here.
-	}
-	
-	UIViewController * newTopWindow = [windowViewControllers lastObject];
-	
-	if ([newTopWindow respondsToSelector:@selector(proxy)])
-	{
-		TiWindowProxy* windowProxy = (TiWindowProxy*)[(TiViewController*)newTopWindow proxy];
-		[self enforceOrientationModesFromWindow:windowProxy rotate:YES];
-	}
+	// No-op on split views
 }
 
 -(void)setBackgroundImage:(UIImage*)image

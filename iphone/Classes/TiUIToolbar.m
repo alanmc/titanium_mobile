@@ -7,19 +7,11 @@
 #ifdef USE_TI_UITOOLBAR
 
 #import "TiUIToolbar.h"
-#import "TiViewProxy.h"
+#import "TiUIViewProxy.h"
 #import "TiUtils.h"
 #import "TiColor.h"
 #import "TiToolbarButton.h"
 #import "TiToolbar.h"
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < __IPHONE_4_0
-
-@interface TiUIToolbar (laterMethods)
-@property(nonatomic) CGFloat           contentScaleFactor;
-@end
-
-#endif
 
 @implementation TiUIToolbar
 
@@ -45,7 +37,7 @@
 -(void)layoutSubviews
 {
 	CGRect ourBounds = [self bounds];
-	CGFloat height = ourBounds.size.height;	
+	CGFloat height = [self bounds].size.height;	
 	if (height != [self verifyHeight:height])
 	{
 		[(TiViewProxy *)[self proxy] setNeedsReposition];
@@ -53,11 +45,16 @@
 	}
 
 
-	CGRect toolBounds;
-	toolBounds.size = [[self toolBar] sizeThatFits:ourBounds.size];
-	toolBounds.origin.x = 0.0;
-	toolBounds.origin.y = hideTopBorder?-1.0:0.0;
-	[toolBar setFrame:toolBounds];
+	CGRect toolBounds = [[self toolBar] bounds];
+	toolBounds.size = [toolBar sizeThatFits:toolBounds.size];
+	CGPoint toolBarCenter = CGPointMake(ourBounds.size.width/2, toolBounds.size.height/2);
+	if (hideTopBorder)
+	{
+		toolBarCenter.y -= 1.0;
+	}
+
+	[toolBar setBounds:toolBounds];
+	[toolBar setCenter:toolBarCenter];
 }
 
 
@@ -69,20 +66,14 @@
 		return;
 	}
 
-	CGRect toolFrame = [self bounds];
+	CGRect toolFrame = [TiUtils viewPositionRect:toolBar];
 
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSetGrayStrokeColor(context, 0.0, 1.0);
-	CGContextSetLineWidth(context, 1.0);
-	CGContextSetShouldAntialias(context,false);
 	CGPoint bottomBorder[2];
 	
 	CGFloat x = toolFrame.origin.x;
-	CGFloat y = toolFrame.origin.y+toolFrame.size.height;
-	if ([self respondsToSelector:@selector(contentScaleFactor)] && [self contentScaleFactor] > 1.0)
-	{ //Yes, this seems very hackish. Very low priority would be to use something more elegant.
-		y -= 0.5;
-	}
+	CGFloat y = toolFrame.origin.y+toolFrame.size.height+1;
 	bottomBorder[0]=CGPointMake(x,y);
 	x += toolFrame.size.width;
 	bottomBorder[1]=CGPointMake(x,y);
@@ -97,7 +88,7 @@
 	{
 		NSMutableArray * result = [NSMutableArray arrayWithCapacity:[value count]];
 		Class proxyClass = [TiViewProxy class];
-		for (TiViewProxy * thisProxy in value) {
+		for (TiUIViewProxy * thisProxy in value) {
 			ENSURE_CLASS(thisProxy,proxyClass);
 			if (![thisProxy supportsNavBarPositioning])
 			{

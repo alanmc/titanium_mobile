@@ -11,10 +11,8 @@
 @interface TiUIPickerProxy : TiViewProxy {
 
 @private
-	NSArray* selectOnLoad;
-}
 
--(void)setSelectedRow:(id)args;
+}
 
 @end
 

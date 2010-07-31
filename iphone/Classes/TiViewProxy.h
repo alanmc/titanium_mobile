@@ -6,7 +6,6 @@
  */
 #import "TiProxy.h"
 #import "TiUIView.h"
-#import <pthread.h>
 
 #define NEEDS_REPOSITION	0 
 #define NEEDS_LAYOUT_CHILDREN	1
@@ -18,7 +17,6 @@
 @interface TiViewProxy : TiProxy<LayoutAutosizing> 
 {
 @protected
-	NSRecursiveLock *destroyLock;
 	CGFloat verticalLayoutBoundary;
 	CGFloat horizontalLayoutBoundary;
 	CGFloat horizontalLayoutRowHeight;	//Note, this has nothing to do with table views.
@@ -26,20 +24,20 @@
 	LayoutConstraint layoutProperties;
 
 	BOOL windowOpened;
-	BOOL windowOpening;
 	int dirtyflags;	//For atomic actions, best to be explicit about the 32 bitness.
 
+//From TiUIWidgetProxy
 	BOOL isUsingBarButtonItem;
 	UIBarButtonItem * barButtonItem;
 
 @private
-	pthread_rwlock_t childrenLock;
+	//Cocoa doesn't have a readwrite lock, so we use pthreads.
+	NSRecursiveLock *childrenLock;
 	NSMutableArray *children;
 	TiUIView *view;
 	TiViewProxy *parent;
 	BOOL viewInitialized;
 	NSMutableArray *pendingAdds;
-	BOOL needsZIndexRepositioning;
 	
 #if USE_VISIBLE_BOOL
 	BOOL visible;
@@ -77,8 +75,7 @@
 -(void)layoutChild:(TiViewProxy*)child optimize:(BOOL)optimize;
 -(void)windowWillOpen;
 -(void)windowDidOpen;
--(BOOL)windowHasOpened;
--(BOOL)windowIsOpening;
+-(BOOL)windowOpened;
 
 -(void)setWidth:(id)value;
 -(void)setHeight:(id)value;
@@ -115,8 +112,6 @@
 -(void)setNeedsReposition;
 -(void)clearNeedsReposition;
 -(void)setNeedsRepositionIfAutoSized;
--(void)setNeedsZIndexRepositioning;
--(BOOL)needsZIndexRepositioning;
 
 -(BOOL)willBeRelaying;
 -(void)childWillResize:(TiViewProxy *)child;

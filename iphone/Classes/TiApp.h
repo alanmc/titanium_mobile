@@ -52,8 +52,6 @@
 
 +(TiApp*)app;
 
--(void)attachXHRBridgeIfRequired;
-
 -(BOOL)isSplashVisible;
 -(void)hideSplash:(id)event;
 -(UIView*)splash;

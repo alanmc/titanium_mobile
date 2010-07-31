@@ -392,7 +392,7 @@ END_UI_THREAD_PROTECTED_VALUE(opened)
 		{
 			modalFlag = YES;
 			attached = YES;
-			TiWindowViewController *wc = (TiWindowViewController*)[self controller];
+			TiWindowViewController *wc = [[[TiWindowViewController alloc] initWithWindow:self] autorelease];
 			UINavigationController *nc = nil;
 			
 			if ([self argOrWindowProperty:@"navBarHidden" args:args]==NO)
@@ -405,7 +405,6 @@ END_UI_THREAD_PROTECTED_VALUE(opened)
 			if (style!=-1)
 			{
 				[wc setModalTransitionStyle:style];
-				[nc setModalTransitionStyle:style];
 			}
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2
 			style = [TiUtils intValue:@"modalStyle" properties:dict def:-1];
@@ -416,7 +415,6 @@ END_UI_THREAD_PROTECTED_VALUE(opened)
 				if ([wc modalTransitionStyle]!=UIModalTransitionStylePartialCurl)
 				{
 					[wc setModalPresentationStyle:style];
-					[nc setModalPresentationStyle:style];
 				}
 			}
 #endif			
@@ -502,11 +500,7 @@ END_UI_THREAD_PROTECTED_VALUE(opened)
 			 [args count] > 0 && 
 			 ![TiUtils boolValue:@"closeByTab" properties:[args objectAtIndex:0] def:NO]))
 		{
-			NSMutableArray* closeArgs = [NSMutableArray arrayWithObject:self];
-			if (args != nil) {
-				[closeArgs addObject:[args objectAtIndex:0]];
-			}
-			[[self tab] close:closeArgs];
+			[[self tab] close:[NSArray arrayWithObject:self]];
 			return;
 		}
 	}
@@ -640,8 +634,6 @@ END_UI_THREAD_PROTECTED_VALUE(opened)
 			[[self _window] addSubview:rootView];
 		}
 		[rootView addSubview:view];
-		
-		[self controller];
 		[[[TiApp app] controller] windowFocused:[self controller]];
 	}
 

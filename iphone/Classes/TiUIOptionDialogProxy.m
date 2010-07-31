@@ -14,15 +14,6 @@
 #import	"TiTab.h"
 
 @implementation TiUIOptionDialogProxy
-@synthesize dialogView;
-
-- (void) dealloc
-{
-	RELEASE_TO_NIL(actionSheet);
-	RELEASE_TO_NIL(dialogView);
-	[super dealloc];
-}
-
 
 -(void)show:(id)args
 {
@@ -36,7 +27,7 @@
 		[options addObject:NSLocalizedString(@"OK",@"Alert OK Button")];
 	}
 	
-	actionSheet = [[UIActionSheet alloc] init];
+	UIActionSheet *actionSheet = [[[UIActionSheet alloc] init] autorelease];
 	[actionSheet setDelegate:self];
 	[actionSheet setTitle:[TiUtils stringValue:[self valueForKey:@"title"]]];
 	
@@ -50,37 +41,70 @@
 	[actionSheet setDestructiveButtonIndex:[TiUtils intValue:[self valueForKey:@"destructive"] def:-1]];
 
 	[self retain];
-
-	if ([TiUtils isIPad])
-	{
-		[self setDialogView:[args objectForKey:@"view"]];
-		animated = [TiUtils boolValue:@"animated" properties:args def:YES];
-		id obj = [args objectForKey:@"rect"];
-		if (obj!=nil)
+	
+	if ([TiUtils isiPhoneOS3_2OrGreater]) {
+		UIView *view = nil;
+		TiViewProxy *proxy = [args objectForKey:@"view"];
+		if (proxy==nil)
 		{
-			dialogRect = [TiUtils rectValue:obj];
+			view = [[TiApp app] controller].view;
 		}
-		else
+		else 
 		{
-			dialogRect = CGRectZero;
+			//TODO: need to deal with button in a Toolbar which will have a nil view
+			
+			BOOL animated = [TiUtils boolValue:@"animated" properties:args def:YES];
+			if ([proxy supportsNavBarPositioning] && [proxy isUsingBarButtonItem])
+			{
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2				
+				UIBarButtonItem *button = [proxy barButtonItem];
+				[actionSheet showFromBarButtonItem:button animated:animated];
+				return;
+#endif				
+			}
+			else if ([proxy isKindOfClass:[TiToolbar class]])
+			{
+				UIToolbar *toolbar = [(TiToolbar*)proxy toolbar];
+				[actionSheet showFromToolbar:toolbar];
+				return;
+			}
+			else if ([proxy conformsToProtocol:@protocol(TiTab)])
+			{
+				id<TiTab> tab = (id<TiTab>)proxy;
+				UITabBar *tabbar = [[tab tabGroup] tabbar];
+				[actionSheet showFromTabBar:tabbar];
+				return;
+			}
+			else
+			{
+				CGRect rect;
+				view = [proxy view];
+				id obj = [args objectForKey:@"rect"];
+				if (obj!=nil)
+				{
+					rect = [TiUtils rectValue:obj];
+				}
+				else
+				{
+					rect = [view bounds];
+				}
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2				
+				[actionSheet showFromRect:rect inView:view animated:animated];
+				return;
+#endif				
+			}
 		}
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateOptionDialog:) name:UIApplicationWillChangeStatusBarOrientationNotification object:nil];
-		[self updateOptionDialogNow];
-		return;
+		[actionSheet showInView:view];
 	}
-	[actionSheet showInView:[[TiApp app] window]];
+	else {
+		[actionSheet showInView:[[TiApp app] window]];
+	}
 }
 
 #pragma mark AlertView Delegate
 
-- (void)actionSheet:(UIActionSheet *)actionSheet_ clickedButtonAtIndex:(NSInteger)buttonIndex;
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex;
 {
-	if (buttonIndex == -2)
-	{
-		return;
-		//A -2 is used by us to indicate that this was programatically dismissed to properly
-		//place the option dialog during a roation.
-	}
 	if ([self _hasListeners:@"click"])
 	{
 		NSDictionary *event = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -90,71 +114,8 @@
 							   nil];
 		[self fireEvent:@"click" withObject:event];
 	}
-	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillChangeStatusBarOrientationNotification object:nil];
 	[self release];
 }
-
--(void)updateOptionDialog:(NSNotification *)notification;
-{
-	[actionSheet dismissWithClickedButtonIndex:-2 animated:animated];
-	[self performSelector:@selector(updateOptionDialogNow) withObject:nil afterDelay:[[UIApplication sharedApplication] statusBarOrientationAnimationDuration]];
-}
-
--(void)updateOptionDialogNow;
-{
-
-	UIView *view = nil;
-	if (dialogView==nil)
-	{
-		view = [[TiApp app] controller].view;
-	}
-	else 
-	{
-		//TODO: need to deal with button in a Toolbar which will have a nil view
-		
-		if ([dialogView supportsNavBarPositioning] && [dialogView isUsingBarButtonItem])
-		{
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2				
-			UIBarButtonItem *button = [dialogView barButtonItem];
-			[actionSheet showFromBarButtonItem:button animated:animated];
-			return;
-#endif				
-		}
-		
-		if ([dialogView isKindOfClass:[TiToolbar class]])
-		{
-			UIToolbar *toolbar = [(TiToolbar*)dialogView toolbar];
-			[actionSheet showFromToolbar:toolbar];
-			return;
-		}
-		
-		if ([dialogView conformsToProtocol:@protocol(TiTab)])
-		{
-			id<TiTab> tab = (id<TiTab>)dialogView;
-			UITabBar *tabbar = [[tab tabGroup] tabbar];
-			[actionSheet showFromTabBar:tabbar];
-			return;
-		}
-		
-		view = [dialogView view];
-		CGRect rect;
-		if (CGRectIsEmpty(dialogRect))
-		{
-			rect = [view bounds];
-		}
-		else
-		{
-			rect = dialogRect;
-		}
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2				
-		[actionSheet showFromRect:rect inView:view animated:animated];
-		return;
-#endif				
-	}
-	[actionSheet showInView:view];
-}
-
 
 @end
 

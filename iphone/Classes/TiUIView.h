@@ -47,7 +47,6 @@ CGFloat AutoHeightForView(UIView * superView,CGFloat suggestedWidth,BOOL isVerti
 	unsigned int animationDelayGuard;
 	
 	// Touch detection
-    BOOL changedInteraction;
 	BOOL handlesTouches;
 	BOOL handlesTaps;
 	CGPoint tapLocation;         // Needed to record location of single tap, which will only be registered after delayed perform.
@@ -92,8 +91,6 @@ CGFloat AutoHeightForView(UIView * superView,CGFloat suggestedWidth,BOOL isVerti
 
 -(void)performZIndexRepositioning;
 -(void)repositionZIndex;
--(void)repositionZIndexIfNeeded;
-
 -(UIImage*)loadImage:(id)image;
 
 -(id)proxyValueForKey:(NSString *)key;
@@ -112,7 +109,6 @@ CGFloat AutoHeightForView(UIView * superView,CGFloat suggestedWidth,BOOL isVerti
 -(void)throwException:(NSString *) reason subreason:(NSString*)subreason location:(NSString *)location;
 
 -(BOOL)interactionDefault; 
--(BOOL)interactionEnabled;
 -(BOOL)hasTouchableListener;
 
 -(void)handleControlEvents:(UIControlEvents)events;
