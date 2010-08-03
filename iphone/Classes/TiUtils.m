@@ -3,6 +3,8 @@
  * Copyright (c) 2009-2010 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
+ * 
+ * WARNING: This is generated code. Modify at your own risk and without support.
  */
 #import <QuartzCore/QuartzCore.h>
 
@@ -34,18 +36,14 @@ extern NSString * const TI_APPLICATION_RESOURCE_DIR;
 
 +(BOOL)isRetinaDisplay
 {
-	// since we call this alot, cache it
-	static CGFloat scale = 0.0;
-	if (scale == 0.0)
-	{
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0
-		if ([[UIScreen mainScreen] respondsToSelector:@selector(scale)])
-		{
-			scale = [UIScreen mainScreen].scale;
-		}
-#endif	
+	if ([[UIScreen mainScreen] respondsToSelector:@selector(scale)] && 
+		[UIScreen mainScreen].scale > 1.0)
+	{
+		return YES;
 	}
-	return scale > 1.0;
+#endif	
+	return NO;
 }
 
 
@@ -243,6 +241,15 @@ extern NSString * const TI_APPLICATION_RESOURCE_DIR;
 	if ([value respondsToSelector:@selector(doubleValue)])
 	{
 		return [value doubleValue];
+	}
+	return 0;
+}
+
++(unsigned int)unsignedIntValue:(id)value
+{
+	if ([value respondsToSelector:@selector(unsignedIntValue)])
+	{
+		return [value unsignedIntValue];
 	}
 	return 0;
 }
@@ -503,21 +510,7 @@ extern NSString * const TI_APPLICATION_RESOURCE_DIR;
 		{
 			return [NSURL URLWithString:object];
 		}
-		
-		// don't bother if we don't at least have a path and it's not remote
-		NSString *urlString = [TiUtils stringValue:object];
-		if ([urlString hasPrefix:@"http"])
-		{
-			NSRange range = [urlString rangeOfString:@"/" options:0 range:NSMakeRange(7, [urlString length]-7)];
-			if (range.location!=NSNotFound)
-			{
-				NSString *path = [(NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (CFStringRef)[urlString substringFromIndex:range.location], CFSTR(":[]@!$ '()*+,;\"<>%{}|\\^~`"), NULL, CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding)) autorelease];
-				urlString = [NSString stringWithFormat:@"%@%@",[urlString substringToIndex:range.location],path];
-			}
-		}
-		
-		url = [NSURL URLWithString:urlString relativeToURL:[proxy _baseURL]];
-		
+		url = [NSURL URLWithString:object relativeToURL:[proxy _baseURL]];
 		if (url==nil)
 		{
 			//encoding problem - fail fast and make sure we re-escape

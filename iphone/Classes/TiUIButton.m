@@ -88,7 +88,8 @@ const UIControlEvents unHighlightingTouches = UIControlEventTouchCancel|UIContro
 
 -(void)frameSizeChanged:(CGRect)frame bounds:(CGRect)bounds
 {
-	[TiUtils setView:self positionRect:CGRectIntegral([TiUtils viewPositionRect:self])];
+  //	[TiUtils setView:self positionRect:CGRectIntegral([TiUtils viewPositionRect:self])];
+	[TiUtils setView:self positionRect:frame];
 	[TiUtils setView:button positionRect:bounds];
 }
 
