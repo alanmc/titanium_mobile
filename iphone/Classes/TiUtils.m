@@ -3,6 +3,8 @@
  * Copyright (c) 2009-2010 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
+ * 
+ * WARNING: This is generated code. Modify at your own risk and without support.
  */
 #import <QuartzCore/QuartzCore.h>
 
@@ -239,6 +241,15 @@ extern NSString * const TI_APPLICATION_RESOURCE_DIR;
 	if ([value respondsToSelector:@selector(doubleValue)])
 	{
 		return [value doubleValue];
+	}
+	return 0;
+}
+
++(unsigned int)unsignedIntValue:(id)value
+{
+	if ([value respondsToSelector:@selector(unsignedIntValue)])
+	{
+		return [value unsignedIntValue];
 	}
 	return 0;
 }
