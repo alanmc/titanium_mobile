@@ -3,6 +3,8 @@
  * Copyright (c) 2009-2010 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
+ * 
+ * WARNING: This is generated code. Modify at your own risk and without support.
  */
 #ifdef USE_TI_CONTACTS
 
@@ -161,46 +163,49 @@ static NSDictionary* multiValueLabels;
 		CFTypeRef value = ABMultiValueCopyValueAtIndex(multiValue, i);
 		
 		if (value == nil) {
-		  CFRelease(label);
+
+		  if (label != nil) {
+		    CFRelease(label);
+		  }
+
 		  CFRelease(value);
 		  continue;
 		}
 		
-		@try {
-		  NSString* readableLabel = nil;
+		NSString* readableLabel = nil;
 		  
-		  NSArray* labelKeys = [[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)label];
-		  if (labelKeys != nil && ([labelKeys count] > 0)) {
-		    readableLabel = [labelKeys objectAtIndex:0];
-		  }
-		  else {
-		    readableLabel = (NSString*)label;
-		  }
-		  
-		  if (readableLabel == nil) {
-		    readableLabel = @"unspecified";
-		  }
-		  
-		  if ([dict valueForKey:readableLabel] == nil) {
-		    [dict setValue:[NSMutableArray array] forKey:readableLabel];
-		  }
-		  
-		  if (CFGetTypeID(value) == CFDateGetTypeID()) {
-		    // Dates still need special handling - we should make a TiDate object
-		    [[dict valueForKey:readableLabel] addObject:[TiUtils UTCDateForDate:(NSDate*)value]];
-		  }
-		  else {
-		    // This works as long as 'value' is toll-free bridged, which is (currently) true for all AB property types
-		    [[dict valueForKey:readableLabel] addObject:(id)value];
-		  }
-		  
+		NSArray* labelKeys = [[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)label];
+		if (labelKeys != nil && ([labelKeys count] > 0)) {
+		  readableLabel = [labelKeys objectAtIndex:0];
 		}
-		@catch (NSException* e)	{
-		  NSLog(@"Caught exception: %@", e);
+		else {
+		  readableLabel = (NSString*)label;
+		}
+		
+		if (readableLabel == nil) {
+		  readableLabel = @"unspecified";
+		}
+		
+		if ([dict valueForKey:readableLabel] == nil) {
+		  [dict setValue:[NSMutableArray array] forKey:readableLabel];
+		}
+		
+		if (CFGetTypeID(value) == CFDateGetTypeID()) {
+		  // Dates still need special handling - we should make a TiDate object
+		  [[dict valueForKey:readableLabel] addObject:[TiUtils UTCDateForDate:(NSDate*)value]];
+		}
+		else {
+		  // This works as long as 'value' is toll-free bridged, which is (currently) true for all AB property types
+		  [[dict valueForKey:readableLabel] addObject:(id)value];
+		}
+		
+		if (label != nil) {
+		  CFRelease(label);
 		}
 
-		CFRelease(label);
-		CFRelease(value);
+		if (value != nil) {
+		  CFRelease(value);
+		}
 	}
 	
 	return dict;

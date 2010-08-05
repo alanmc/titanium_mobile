@@ -181,19 +181,17 @@
 }
 
 -(NSNumber*)getPeopleCount:(id)unused
-{
- 
+{ 
   if (![NSThread isMainThread]) {
     [self performSelectorOnMainThread:@selector(getPeopleCount:) withObject:unused waitUntilDone:YES];
     return [returnCache objectForKey:@"peopleCount"];
   }
   
   NSNumber* count = [NSNumber numberWithLong:ABAddressBookGetPersonCount([self addressBook])];
-  
+ 
   [returnCache setObject:count forKey:@"peopleCount"];
   return count;
 }
-
 
 -(NSArray*)getAllPeople:(id)unused
 {
@@ -373,7 +371,7 @@ MAKE_SYSTEM_PROP(CONTACTS_SORT_LAST_NAME,kABPersonSortByLastName);
 		id value = nil;
 		id label = [NSNull null];
 		if (identifier == kABMultiValueInvalidIdentifier) { 
-			propertyName = [[[TiContactsPerson contactProperties] allKeysForObject:[NSNumber numberWithInt:property]] objectAtIndex:0];
+		        propertyName = [[[TiContactsPerson contactProperties] allKeysForObject:[NSNumber numberWithInt:property]] objectAtIndex:0];
 			CFTypeRef val = ABRecordCopyValue(person, property);
 			value = [[(id)val retain] autorelease]; // Force toll-free bridging & autorelease
 			CFRelease(val);
@@ -388,9 +386,10 @@ MAKE_SYSTEM_PROP(CONTACTS_SORT_LAST_NAME,kABPersonSortByLastName);
 			CFRelease(val);
 			
 			CFStringRef CFlabel = ABMultiValueCopyLabelAtIndex(multival, index);
-			label = [NSString stringWithString:[[[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)CFlabel] objectAtIndex:0]];
+			//			label = [NSString stringWithString:[[[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)CFlabel] objectAtIndex:0]];
+			// We don't care about the label, so don't get tripped up over it.
+			label = [NSString stringWithString:@"label"];
 			CFRelease(CFlabel);
-			
 			CFRelease(multival);
 		}
 		
