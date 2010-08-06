@@ -405,9 +405,10 @@ MAKE_SYSTEM_PROP(CONTACTS_SORT_LAST_NAME,kABPersonSortByLastName);
 			CFRelease(val);
 			
 			CFStringRef CFlabel = ABMultiValueCopyLabelAtIndex(multival, index);
-			label = [NSString stringWithString:[[[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)CFlabel] objectAtIndex:0]];
+			//label = [NSString stringWithString:[[[TiContactsPerson multiValueLabels] allKeysForObject:(NSString*)CFlabel] objectAtIndex:0]];
+			label = @"unspecified";
+
 			CFRelease(CFlabel);
-			
 			CFRelease(multival);
 		}
 		

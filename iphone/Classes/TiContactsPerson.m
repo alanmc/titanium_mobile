@@ -166,8 +166,11 @@ static NSDictionary* multiValueLabels;
 		
 		  // If value is nil we need to release and keep going to prevent a crash
 		  if (value == nil) {
-		    CFRelease(label);
-		    CFRelease(value);
+
+		    if (label != nil) {
+		      CFRelease(label);
+		    }
+		    
 		    continue;
 		  }
 
@@ -205,8 +208,13 @@ static NSDictionary* multiValueLabels;
 		  NSLog(@"[DEBUG] Caught NSException parsing contact data: %@", e);
 		}
 		
-		CFRelease(label);
-		CFRelease(value);
+		if (label != nil) {
+		  CFRelease(label);
+		}
+
+		if (value != nil) {
+		  CFRelease(value);
+		}
 	}
 	
 	return dict;
