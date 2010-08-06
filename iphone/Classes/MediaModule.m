@@ -1014,28 +1014,20 @@ if (![TiUtils isIOS4OrGreater]) { \
   return currentAssetInfo;
 }
 
--(NSArray *)getAlbums:(NSDictionary*)args
+-(void)getAlbums:(NSDictionary*)args
 {
 
   ONLY_IN_IOS4_OR_GREATER(getAlbums,nil);
   ENSURE_SINGLE_ARG(args, NSDictionary);
 
-  NSLog(@"Get Albums1");
-  NSLog(@"Get Albums2");
-
   getAlbumsSuccessCallback = [args objectForKey:@"success"];
   ENSURE_TYPE_OR_NIL(getAlbumsSuccessCallback,KrollCallback);
   [getAlbumsSuccessCallback retain];
 
-  NSLog(@"Get Albums1");
-  NSLog(@"Get Albums2");
-  
   getAlbumsErrorCallback = [args objectForKey:@"error"];
   ENSURE_TYPE_OR_NIL(getAlbumsErrorCallback,KrollCallback);
   [getAlbumsErrorCallback retain];
   
-  NSLog(@"Get Albums");
-
   if (albums == nil) {
     albums = [[NSMutableArray alloc] init];
   } else {
@@ -1046,15 +1038,9 @@ if (![TiUtils isIOS4OrGreater]) { \
     library=[[ALAssetsLibrary alloc] init];
   }
   
-
-  isDoneEnumeratingAlbums = NO;
-
   void (^assetGroupEnumerator)(struct ALAssetsGroup *, BOOL *) = ^(ALAssetsGroup *group, BOOL *stop) {
 
     if (group == nil || *stop == YES) {
-      NSLog(@"Groups is nil");
-      isDoneEnumeratingAlbums = YES;
-
       NSMutableDictionary *dictionary = [NSMutableDictionary dictionary];	
       [dictionary setObject:albums forKey:@"albums"];
       
@@ -1096,82 +1082,6 @@ if (![TiUtils isIOS4OrGreater]) { \
       [self sendGetAlbumsError:[NSNumber numberWithInteger:0]];
     }];
   
-  //  while (isDoneEnumeratingAlbums == NO) {}
-  //  isDoneEnumeratingAlbums = NO;
-  //  NSLog(@"Returning albums: %u", [albums count]);
-  //  return albums;
-}
-
--(NSArray *)getAlbumAssets:(id)arg
-{
-
-  ONLY_IN_IOS4_OR_GREATER(getAlbumAssets,nil)
-  ENSURE_SINGLE_ARG_OR_NIL(arg,NSString);
-
-  if (library==nil) {
-    library=[[ALAssetsLibrary alloc] init];
-  }
-
-  if (albumAssets == nil) {
-    albumAssets = [[NSMutableArray alloc] init];
-  } else {
-    [albumAssets removeAllObjects];
-  }
-
-  isDoneEnumeratingAlbumAssets = NO;
-  
-  void (^assetEnumerator)(struct ALAsset *, NSUInteger, BOOL *) = ^(ALAsset *result, NSUInteger index, BOOL *stop) {
-
-    if(result != nil) {
-      ALAssetRepresentation* rep = [result representationForUTI:@"public.jpeg"];
-
-      if (rep == nil) {
-	rep = [result representationForUTI:@"public.png"];
-      }
-
-      if (rep == nil) {
-	rep = [result representationForUTI:@"public.gif"];
-      }
-
-      NSLog(@"rep: %@", rep);
-
-      if (rep != nil) {
-        NSLog(@"Adding url: %@", [[rep url] absoluteString]);
-        [albumAssets addObject:[[rep url] absoluteString]];
-      }
-
-    } else {
-      NSLog(@"Asset is NULL");
-      //      isDoneEnumeratingAlbumAssets = YES;
-    }
-  };
-  
-  void (^assetGroupEnumerator)(struct ALAssetsGroup *, BOOL *) =  ^(ALAssetsGroup *group, BOOL *stop) {
-    if(group != nil) {
-
-      if (arg == nil || [arg isEqualToString:[group valueForProperty:ALAssetsGroupPropertyName]]) {
-        [group enumerateAssetsUsingBlock:assetEnumerator];
-      }
-      
-    } else {
-      NSLog(@"Group NULL");
-      isDoneEnumeratingAlbumAssets = YES;
-    }
-  };
-
-  [library enumerateGroupsWithTypes:ALAssetsGroupAlbum
-           usingBlock:assetGroupEnumerator
-           failureBlock: ^(NSError *error) {
-      NSLog(@"Failure");
-      albumAssets = nil;
-      isDoneEnumeratingAlbumAssets = YES;
-    }];
-
-  while (isDoneEnumeratingAlbumAssets == NO) {}
-
-  isDoneEnumeratingAlbumAssets = NO;
-  return albumAssets;
-
 }
 
 -(void)getAlbumAssetsByIndex:(NSDictionary*)args
@@ -1191,7 +1101,7 @@ if (![TiUtils isIOS4OrGreater]) { \
   NSString *albumName = [TiUtils stringValue:[args objectForKey:@"albumName"]];
   NSNumber* startIndexArg = [args objectForKey:@"startIndex"];
   NSNumber* countArg = [args objectForKey:@"count"];
-
+  
   unsigned int startIndex = [startIndexArg unsignedIntValue]; //[args objectForKey:"@startIndex"];
   unsigned int count =[countArg unsignedIntValue]; //[args objectForKey:@"count"];
 
@@ -1229,6 +1139,10 @@ if (![TiUtils isIOS4OrGreater]) { \
 	rep = [result representationForUTI:@"public.gif"];
       }
 
+      if (rep == nil) {
+	rep = [result representationForUTI:@"public.tiff"];
+      }
+
       NSLog(@"rep: %@", rep);
 
       if (rep != NULL) {
@@ -1236,9 +1150,6 @@ if (![TiUtils isIOS4OrGreater]) { \
         [albumAssets addObject:[[rep url] absoluteString]];
       }
 
-    } else {
-      NSLog(@"Asset is NULL");
-      //      isDoneEnumeratingAlbumAssets = YES;
     }
   };
 
@@ -1250,8 +1161,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 	unsigned int endCount = count;
 
 	if ([group numberOfAssets] <= startIndex) {
-	  NSLog(@"startIndex too large");
-	  isDoneEnumeratingAlbumAssets = YES;
+	  NSLog(@"startIndex too large...failing");
 	  [self sendGetAlbumAssetsByIndexError:0];
 	  return;
 	}
@@ -1262,7 +1172,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 	} 
 	
         [group enumerateAssetsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(startIndex, endCount)]
-	       options:0
+	       options:NSEnumerationReverse
 	       usingBlock:assetEnumerator];
       }
       
@@ -1279,12 +1189,89 @@ if (![TiUtils isIOS4OrGreater]) { \
       NSLog(@"Failure");
       albumAssets = nil;
       isDoneEnumeratingAlbumAssets = YES;
-    }];
-  
-  //  while (isDoneEnumeratingAlbumAssets == NO) {}
+      [self sendGetAlbumAssetsByIndexError:0];
+    }];  
+}
 
-  //  isDoneEnumeratingAlbumAssets = NO;
-  //  return albumAssets;
+-(void)getAlbumAssets:(NSDictionary*)args
+{
+
+  ONLY_IN_IOS4_OR_GREATER(getAlbumAssetsByIndex,nil);
+  ENSURE_SINGLE_ARG(args,NSDictionary);
+
+  getAlbumAssetsByIndexSuccessCallback = [args objectForKey:@"success"];
+  ENSURE_TYPE_OR_NIL(getAlbumAssetsByIndexSuccessCallback,KrollCallback);
+  [getAlbumAssetsByIndexSuccessCallback retain];
+  
+  getAlbumAssetsByIndexErrorCallback = [args objectForKey:@"error"];
+  ENSURE_TYPE_OR_NIL(getAlbumAssetsByIndexErrorCallback,KrollCallback);
+  [getAlbumAssetsByIndexSuccessCallback retain];
+
+  NSString *albumName = [TiUtils stringValue:[args objectForKey:@"albumName"]];
+
+  if (library==nil) {
+    library=[[ALAssetsLibrary alloc] init];
+  }
+  
+  if (currentAlbumAssets == nil) {
+    currentAlbumAssets = [[NSMutableDictionary alloc] init];
+  } else {
+    [currentAlbumAssets removeAllObjects];
+  }
+
+  if (albumAssets == nil) {
+    albumAssets = [[NSMutableArray alloc] init];
+  } else {
+    [albumAssets removeAllObjects];
+  }
+
+  void (^assetEnumerator)(struct ALAsset *, NSUInteger, BOOL *) = ^(ALAsset *result, NSUInteger index, BOOL *stop) {
+    
+    if(result != nil) {
+      
+      ALAssetRepresentation* rep = [result representationForUTI:@"public.jpeg"];
+
+      if (rep == nil) {
+	rep = [result representationForUTI:@"public.png"];
+      }
+
+      if (rep == nil) {
+	rep = [result representationForUTI:@"public.gif"];
+      }
+
+      if (rep == nil) {
+	rep = [result representationForUTI:@"public.tiff"];
+      }
+
+      if (rep != NULL) {
+        NSLog(@"Adding url: %@", [[rep url] absoluteString]);
+        [albumAssets addObject:[[rep url] absoluteString]];
+      }
+    }
+  };
+
+  void (^assetGroupEnumerator)(struct ALAssetsGroup *, BOOL *) =  ^(ALAssetsGroup *group, BOOL *stop) {
+
+    if(group != nil) {
+      
+      if (albumName == nil || [albumName isEqualToString:[group valueForProperty:ALAssetsGroupPropertyName]]) {
+        [group enumerateAssetsUsingBlock:assetEnumerator];
+      }
+      
+    } else {
+      NSLog(@"Group NULL");
+      [currentAlbumAssets addObject:albumAssets forKey:@"assets"];
+      [self sendGetAlbumAssetsByIndexSuccess:currentAlbumAssets];
+    }
+  };
+  
+  [library enumerateGroupsWithTypes:ALAssetsGroupAlbum
+           usingBlock:assetGroupEnumerator
+           failureBlock: ^(NSError *error) {
+      NSLog(@"Failure");
+      albumAssets = nil;
+      [self sendGetAlbumAssetsByIndexError:0];
+    }];  
 }
 
 #endif
