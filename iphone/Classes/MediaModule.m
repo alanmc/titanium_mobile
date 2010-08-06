@@ -778,17 +778,21 @@ if (![TiUtils isIOS4OrGreater]) { \
     }
 
     ALAssetRepresentation* rep = [asset representationForUTI:@"public.jpeg"];
+    NSString mimeType = @"image/jpeg";
 
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.png"];
+      mimeType = @"image/png";
     }
     
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.gif"];
+      mimeType = @"image/gif";
     }
 
     if (rep == nil) {
-      rep = [asset representationForUTI:@"public.tiif"];
+      rep = [asset representationForUTI:@"public.tiff"];
+      mimeType = @"image/tiff";
     }
 
     if (rep==nil) {
@@ -806,7 +810,7 @@ if (![TiUtils isIOS4OrGreater]) { \
     
     currentBuffer = [[TiBlob alloc] initWithData:[NSData dataWithBytes:(void *)dataBuffer
 							 length:[rep size]]
-				    mimetype:@"image/jpeg"];
+				    mimetype:mimeType];
     
     free(dataBuffer);
     isDoneRetrievingAsset = YES;
@@ -1158,6 +1162,7 @@ if (![TiUtils isIOS4OrGreater]) { \
     if(group != nil) {
       
       if (albumName == nil || [albumName isEqualToString:[group valueForProperty:ALAssetsGroupPropertyName]]) {
+	[group setAssetsFilter:[ALAssetsFilter allPhotos]];
 	unsigned int endCount = count;
 
 	if ([group numberOfAssets] <= startIndex) {
