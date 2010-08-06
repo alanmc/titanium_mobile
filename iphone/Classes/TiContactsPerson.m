@@ -168,7 +168,6 @@ static NSDictionary* multiValueLabels;
 		    CFRelease(label);
 		  }
 
-		  CFRelease(value);
 		  continue;
 		}
 		
@@ -371,7 +370,11 @@ static NSDictionary* multiValueLabels;
 		if(!ABRecordSetValue([self record], [property intValue], (CFStringRef)stringVal, &error)) {
 			CFStringRef reason = CFErrorCopyDescription(error);
 			NSString* str = [NSString stringWithString:(NSString*)reason];
-			CFRelease(reason);
+
+			if (error != nil) {
+			  CFRelease(reason);
+			}
+
 			[self throwException:[NSString stringWithFormat:@"Failed to set contact property %@: %@", key, str]
 					   subreason:nil
 						location:CODELOCATION];
@@ -386,8 +389,10 @@ static NSDictionary* multiValueLabels;
 		ABMultiValueRef multiVal = [self dictionaryToMultiValue:value type:type];
 		CFErrorRef error;
 		if (!ABRecordSetValue([self record], propertyID, multiVal, &error)) {
-			CFRelease(multiVal);
-			
+            		if (multiVal != nil) {
+			  CFRelease(multiVal);
+			}
+
 			CFStringRef reason = CFErrorCopyDescription(error);
 			NSString* str = [NSString stringWithString:(NSString*)reason];
 			CFRelease(reason);
