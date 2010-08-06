@@ -17,12 +17,14 @@
 #import "TiUIView.h"
 #import "TiSplitViewController.h"
 
+#import "MGSplitViewController.h"
+
 @class TiUIiPadPopoverProxy;
 
-@interface TiUIiPadSplitWindow : TiUIView<UISplitViewControllerDelegate> {
+@interface TiUIiPadSplitWindow : TiUIView<UISplitViewControllerDelegate,MGSplitViewControllerDelegate> {
 
 @private
-	TiSplitViewController *controller;
+	MGSplitViewController *controller;
 }
 
 -(UIViewController*)controller;
