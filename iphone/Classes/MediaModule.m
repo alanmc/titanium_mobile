@@ -778,7 +778,7 @@ if (![TiUtils isIOS4OrGreater]) { \
     }
 
     ALAssetRepresentation* rep = [asset representationForUTI:@"public.jpeg"];
-    NSString mimeType = @"image/jpeg";
+    NSMutableString* mimeType = @"image/jpeg";
 
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.png"];
@@ -790,6 +790,11 @@ if (![TiUtils isIOS4OrGreater]) { \
       mimeType = @"image/gif";
     }
 
+    if (rep == nil) {
+      rep = [asset representationForUTI:@"com.compuserve.gif"];
+      mimeType = @"image/gif";
+    }
+    
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.tiff"];
       mimeType = @"image/tiff";
@@ -874,6 +879,10 @@ if (![TiUtils isIOS4OrGreater]) { \
     
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.gif"];
+    }
+    
+    if (rep == nil) {
+      rep = [asset representationForUTI:@"com.compuserve.gif"];
     }
     
     if (rep == nil) {
@@ -1133,6 +1142,12 @@ if (![TiUtils isIOS4OrGreater]) { \
   void (^assetEnumerator)(struct ALAsset *, NSUInteger, BOOL *) = ^(ALAsset *result, NSUInteger index, BOOL *stop) {
     
     if(result != nil) {
+
+      NSLog(@"All Representations: %@", [result valueForProperty:ALAssetPropertyRepresentations]);
+
+      ALAssetRepresentation* drep = [result defaultRepresentation];
+      NSLog(@"Default rep: %@", drep);
+
       ALAssetRepresentation* rep = [result representationForUTI:@"public.jpeg"];
 
       if (rep == nil) {
@@ -1141,6 +1156,10 @@ if (![TiUtils isIOS4OrGreater]) { \
 
       if (rep == nil) {
 	rep = [result representationForUTI:@"public.gif"];
+      }
+
+      if (rep == nil) {
+	rep = [result representationForUTI:@"com.compuserve.gif"];
       }
 
       if (rep == nil) {
