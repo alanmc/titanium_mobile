@@ -69,7 +69,6 @@
 	return windowOpened;
 }
 
-
 #pragma mark Subclass Callbacks 
 
 -(void)childAdded:(id)child
@@ -125,17 +124,7 @@
 
 -(void)setBackgroundGradient:(id)arg
 {
-	TiGradient * newGradient;
-	if ([arg isKindOfClass:[NSDictionary class]])
-	{
-		newGradient = [[[TiGradient alloc] _initWithPageContext:[self executionContext]] autorelease];
-		[newGradient _initWithProperties:arg];
-	}
-	else
-	{
-		newGradient = arg;
-	}
-	ENSURE_TYPE_OR_NIL(newGradient,TiGradient);
+	TiGradient * newGradient = [TiGradient gradientFromObject:arg proxy:self];
 	[self replaceValue:newGradient forKey:@"backgroundGradient" notification:YES];
 }
 
@@ -396,14 +385,20 @@
 //CAUTION: TO BE USED ONLY WITH TABLEVIEW MAGIC
 -(void)setView:(TiUIView *)newView
 {
-	[view release];
-	view = [newView retain];
-	if (self.modelDelegate!=nil && [self.modelDelegate respondsToSelector:@selector(detachProxy)])
-	{
-		[self.modelDelegate detachProxy];
-		self.modelDelegate=nil;
+	if (view != newView) {
+		[view removeFromSuperview];
+		[view release];
+		view = [newView retain];
 	}
-	self.modelDelegate = newView;
+	
+	if (self.modelDelegate != newView) {
+		if (self.modelDelegate!=nil && [self.modelDelegate respondsToSelector:@selector(detachProxy)])
+		{
+			[self.modelDelegate detachProxy];
+			self.modelDelegate=nil;
+		}
+		self.modelDelegate = newView;
+	}
 }
 
 -(BOOL)shouldDetachViewOnUnload
@@ -454,6 +449,7 @@
 	if (children != nil) {
 		for (TiViewProxy* child in children) {
 			[self layoutChild:child optimize:NO];
+			[child windowWillOpen];
 		}
 	}
 	
@@ -570,26 +566,12 @@
 	[self didFirePropertyChanges];
 }
 
--(void)exchangeView:(TiUIView*)newview
-{
-	//NOTE: this is dangerous and should only be called
-	//when you know what the heck you intend to do.
-	//used by tableview currently for view swapping
-	if (view!=nil)
-	{
-		view.proxy = nil;
-		RELEASE_TO_NIL(view);
-	}
-	view = [newview retain];
-	view.proxy = self;
-}
-
 -(TiUIView*)view
 {
 	if (view == nil)
 	{
 		WARN_IF_BACKGROUND_THREAD
-#ifdef DEBUG
+#ifdef VERBOSE
 		if(![NSThread isMainThread])
 		{
 			NSLog(@"[WARN] Break here");
@@ -1055,6 +1037,7 @@
 	BOOL isHorizontal = TiLayoutRuleIsHorizontal(layoutProperties.layout);
 	CGFloat result = 0.0;
 	
+	pthread_rwlock_rdlock(&childrenLock);
 	for (TiViewProxy * thisChildProxy in self.children)
 	{
 		CGFloat thisWidth = [thisChildProxy minimumParentWidthForWidth:suggestedWidth];
@@ -1066,6 +1049,12 @@
 		{
 			result = thisWidth;
 		}
+	}
+	pthread_rwlock_unlock(&childrenLock);
+
+	if (result == 0)
+	{
+		NSLog(@"[WARN] %@ has an auto width value of 0, meaning this view may not be visible.",self);
 	}
 	if (suggestedWidth == 0.0)
 	{
@@ -1119,7 +1108,12 @@
 		}
 	}
 	pthread_rwlock_unlock(&childrenLock);
-	return result + currentRowHeight;
+	result += currentRowHeight;
+	if (result == 0)
+	{
+		NSLog(@"[WARN] %@ has an auto height value of 0, meaning this view may not be visible.",self);
+	}
+	return result;
 }
 
 -(CGFloat)minimumParentWidthForWidth:(CGFloat)suggestedWidth
@@ -1283,12 +1277,6 @@
 	}
 }
 
--(BOOL)isAutoHeightOrWidth
-{
-	return(TiDimensionIsAuto(layoutProperties.width) || TiDimensionIsAuto(layoutProperties.height));
-}
-
-
 #define LAYOUTPROPERTIES_SETTER(methodName,layoutName,converter)	\
 -(void)methodName:(id)value	\
 {	\
@@ -1310,6 +1298,14 @@ LAYOUTPROPERTIES_SETTER(setLayout,layout,TiLayoutRuleFromObject)
 
 LAYOUTPROPERTIES_SETTER(setMinWidth,minimumWidth,TiFixedValueRuleFromObject)
 LAYOUTPROPERTIES_SETTER(setMinHeight,minimumHeight,TiFixedValueRuleFromObject)
+
+-(void)setSize:(id)value
+{
+	ENSURE_DICT(value);
+	layoutProperties.width = TiDimensionFromObject([value objectForKey:@"width"]);
+ 	layoutProperties.height = TiDimensionFromObject([value objectForKey:@"height"]);
+	[self setNeedsReposition];
+}
 
 -(void)setCenter:(id)value
 {
@@ -1355,6 +1351,175 @@ LAYOUTPROPERTIES_SETTER(setMinHeight,minimumHeight,TiFixedValueRuleFromObject)
 	TiAction * ourAction = [[TiAction alloc] initWithTarget:nil selector:selector arg:object];
 	[self performSelectorOnMainThread:@selector(makeViewPerformAction:) withObject:ourAction waitUntilDone:wait];
 	[ourAction release];
+}
+
+
+-(void)refreshView:(TiUIView *)transferView
+{
+	WARN_IF_BACKGROUND_THREAD;
+
+//TODO: Reliable way to know when to skip.
+
+	if(OSAtomicTestAndClearBarrier(TiRefreshViewSize, &dirtyflags))
+	{
+		[self refreshSize];
+	}
+	else if(transferView != nil)
+	{
+		[transferView setBounds:sizeCache];
+	}
+
+	if(OSAtomicTestAndClearBarrier(TiRefreshViewPosition, &dirtyflags))
+	{
+		[self refreshPosition];
+	}
+	else if(transferView != nil)
+	{
+		[transferView setCenter:positionCache];
+	}
+
+//We should only recurse if we're a non-absolute layout. Otherwise, the views can take care of themselves.
+	if((transferView == nil) && OSAtomicTestAndClearBarrier(TiRefreshViewPosition, &dirtyflags))
+	//If transferView is non-nil, this will be managed by the table row.
+	{
+		
+	}
+
+	if(OSAtomicTestAndClearBarrier(TiRefreshViewZIndex, &dirtyflags) || (transferView != nil))
+	{
+		[self refreshZIndex];
+	}
+	
+	
+
+}
+
+-(void)refreshZIndex
+{
+	OSAtomicTestAndClearBarrier(TiRefreshViewZIndex, &dirtyflags);
+
+}
+
+-(void)refreshPosition
+{
+	OSAtomicTestAndClearBarrier(TiRefreshViewPosition, &dirtyflags);
+
+}
+
+-(void)refreshSize
+{
+	OSAtomicTestAndClearBarrier(TiRefreshViewSize, &dirtyflags);
+
+
+}
+
+
+#define SET_AND_PERFORM(flagBit,action)	\
+if(OSAtomicTestAndSetBarrier(flagBit, &dirtyflags))	\
+{	\
+	action;	\
+}
+
+-(void)willChangeSize
+{
+	SET_AND_PERFORM(TiRefreshViewSize,return);
+
+	if (!TiLayoutRuleIsAbsolute(layoutProperties.layout))
+	{
+		[self willChangeLayout];
+	}
+	if(TiDimensionIsUndefined(layoutProperties.centerX) ||
+			TiDimensionIsUndefined(layoutProperties.centerY))
+	{
+		[self willChangePosition];
+	}
+
+	[parent contentsWillChange];
+	pthread_rwlock_rdlock(&childrenLock);
+	for (TiViewProxy * thisChild in children)
+	{
+		[thisChild parentSizeWillChange];
+	}
+	pthread_rwlock_unlock(&childrenLock);
+}
+
+-(void)willChangePosition
+{
+	SET_AND_PERFORM(TiRefreshViewPosition,return);
+
+	if(TiDimensionIsUndefined(layoutProperties.width) || 
+			TiDimensionIsUndefined(layoutProperties.height))
+	{//The only time size can be changed by the margins is if the margins define the size.
+		[self willChangeSize];
+	}
+	[parent contentsWillChange];
+}
+
+-(void)willChangeZIndex
+{
+	SET_AND_PERFORM(TiRefreshViewZIndex,);
+	//Nothing cascades from here.
+}
+
+-(void)willChangeVisibility
+{
+	SET_AND_PERFORM(TiRefreshViewZIndex,);
+	[parent contentsWillChange];
+}
+
+-(void)willChangeLayout
+{
+	SET_AND_PERFORM(TiRefreshViewChildrenPosition,return);
+	pthread_rwlock_rdlock(&childrenLock);
+	for (TiViewProxy * thisChild in children)
+	{
+		[thisChild parentWillRelay];
+	}
+	pthread_rwlock_unlock(&childrenLock);
+}
+
+-(void)contentsWillChange
+{
+	if (TiDimensionIsAuto(layoutProperties.width) ||
+			TiDimensionIsAuto(layoutProperties.height))
+	{
+		[self willChangeSize];
+	}
+	else if (!TiLayoutRuleIsAbsolute(layoutProperties.layout))
+	{//Since changing size already does this, we only need to check
+	//Layout if the changeSize didn't
+		[self willChangeLayout];
+	}
+}
+
+-(void)parentSizeWillChange
+{
+//	if percent or undefined size, change size
+	if(TiDimensionIsUndefined(layoutProperties.width) ||
+			TiDimensionIsUndefined(layoutProperties.height) ||
+			TiDimensionIsPercent(layoutProperties.width) ||
+			TiDimensionIsPercent(layoutProperties.height))
+	{
+		[self willChangeSize];
+	}
+	if(!TiDimensionIsPixels(layoutProperties.centerX) ||
+			!TiDimensionIsPixels(layoutProperties.centerY))
+	{
+		[self willChangePosition];
+	}
+}
+
+-(void)parentWillRelay
+{
+//	if percent or undefined size, change size
+	if(TiDimensionIsUndefined(layoutProperties.width) ||
+			TiDimensionIsUndefined(layoutProperties.height) ||
+			TiDimensionIsPercent(layoutProperties.width) ||
+			TiDimensionIsPercent(layoutProperties.height))
+	{
+		[self willChangeSize];
+	}
+	[self willChangePosition];
 }
 
 @end

@@ -508,7 +508,18 @@ DEFINE_EXCEPTIONS
 	}
 	else if ([arg isKindOfClass:[NSString class]]) {
 		NSURL *url_ = [TiUtils toURL:arg proxy:self.proxy];
-		
+
+//	TODO: Move this over into ImageLoader or some other way to more intellegently cache large files.
+		UIImage * testImage = [UIImage imageWithContentsOfFile:[url_ path]];
+		if (testImage != nil)
+		{
+			CGSize fullSize = [testImage size];
+			autoHeight = fullSize.height;
+			autoWidth = fullSize.width;
+			return testImage;
+		}
+//	END TODO
+
 		CGSize fullSize = [[ImageLoader sharedLoader] fullImageSize:url_];
 		autoHeight = fullSize.height;
 		autoWidth = fullSize.width;
@@ -520,6 +531,7 @@ DEFINE_EXCEPTIONS
 	{
 		// called within this class
 		image = (UIImage*)arg; 
+		image = [self scaleImageIfRequired:image];
 	}
 	
 	return image;
@@ -644,6 +656,7 @@ DEFINE_EXCEPTIONS
 	{
 		// called within this class
 		image = (UIImage*)arg;
+		image = [self scaleImageIfRequired:image];
 	}
 	else 
 	{
@@ -716,7 +729,8 @@ DEFINE_EXCEPTIONS
 -(void)setUrl_:(id)img
 {
 	NSLog(@"[WARN] the 'url' property on ImageView has been deprecated. Please use 'image' instead");
-	[self.proxy replaceValue:img forKey:@"image" notification:YES];
+	// setImage_ does the property replacement for us; no need to do it twice.
+	[self setImage_:img];
 	return;
 }
 

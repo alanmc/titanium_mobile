@@ -21,10 +21,8 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.text.method.DialerKeyListener;
 import android.text.method.DigitsKeyListener;
-import android.text.method.KeyListener;
 import android.text.method.PasswordTransformationMethod;
 import android.text.method.TextKeyListener;
-import android.text.method.TransformationMethod;
 import android.text.method.TextKeyListener.Capitalize;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -298,6 +296,7 @@ public class TiUIText extends TiUIView
 			Rect r = new Rect();
 			nativeView.getFocusedRect(r);
 			nativeView.requestRectangleOnScreen(r);
+
 		}
 		super.onFocusChange(v, hasFocus);
 	}
@@ -387,6 +386,9 @@ public class TiUIText extends TiUIView
 				//tv.setRawInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
 				tv.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 				break;
+		}
+		if (!field) {
+			tv.setSingleLine(false);
 		}
 	}
 
