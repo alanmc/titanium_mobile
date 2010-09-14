@@ -17,9 +17,10 @@ enum
 	TiRefreshViewChildrenPosition,
 	TiRefreshViewZIndex,
 	TiRefreshViewSize,
+
+	TiRefreshViewEnqueued,
 };
 
-#define USE_VISIBLE_BOOL 0
 #define DONTSHOWHIDDEN 0 
 
 //For TableRows, we need to have minimumParentHeightForWidth:
@@ -50,12 +51,20 @@ enum
 	NSMutableArray *pendingAdds;
 	BOOL needsZIndexRepositioning;	//Todo: Replace
 	
-	
+	CGRect sandboxBounds;
 	CGPoint positionCache;	//Recomputed and stored when position changes.
 	CGRect sizeCache;	//Recomputed and stored when size changes.
-	BOOL onscreen; //This in pseudocode, represents [self isVisible] && ([parent onscreen] || [self attachedToRootView])
-	//That is, will be true if and only if not hidden and the parent is onscreen or is the root controller.
+	UIViewAutoresizing autoresizeCache;	//Changed by repositioning or resizing.
+
+	BOOL parentVisible;
+	//In most cases, this is the same as [parent parentVisible] && [parent visible]
+	//However, in the case of windows attached to the root view, the parent is ALWAYS visible.
+	//That is, will be true if and only if all parents are visible or are the root controller.
+	//Use parentWillShow and parentWillHide to set this.
 }
+@property(nonatomic,readonly) BOOL visible;
+@property(nonatomic,readwrite,assign) CGRect sandboxBounds;
+	//This is unaffected by parentVisible. So if something is truely visible, it'd be [self visible] && parentVisible.
 
 @property(nonatomic,readwrite,assign) LayoutConstraint * layoutProperties;
 
@@ -130,8 +139,6 @@ enum
 
 -(void)makeViewPerformSelector:(SEL)selector withObject:(id)object createIfNeeded:(BOOL)create waitUntilDone:(BOOL)wait;
 
-@property(nonatomic,readwrite,assign) BOOL onscreen;
-
 -(void)refreshView:(TiUIView *)transferView;
 -(void)refreshZIndex;
 -(void)refreshPosition;
@@ -140,13 +147,18 @@ enum
 -(void)willChangeSize;
 -(void)willChangePosition;
 -(void)willChangeZIndex;
--(void)willChangeVisibility;
 -(void)willChangeLayout;
+-(void)willShow;
+-(void)willHide;
 
 -(void)contentsWillChange;
 
 -(void)parentSizeWillChange;
 -(void)parentWillRelay;
+-(void)parentWillShow;
+-(void)parentWillHide;
+
+-(BOOL)suppressesRelayout;
 
 @end
 

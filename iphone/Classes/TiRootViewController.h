@@ -14,7 +14,6 @@
 @interface TiRootViewController : UIViewController<UIApplicationDelegate,TiRootController,TiOrientationController> {
 @private
 	NSMutableArray *windowViewControllers;	
-	TiWindowProxy *currentWindow;	//NOT RETAINED
 	
 	UIColor * backgroundColor;
 	UIImage * backgroundImage;
@@ -23,9 +22,7 @@
 	NSTimeInterval	orientationRequestTimes[MAX_ORIENTATIONS];
 
 	UIInterfaceOrientation lastOrientation;
-	
 	UIInterfaceOrientation windowOrientation;
-
 
 	NSMutableArray * viewControllerStack;
 	BOOL isCurrentlyVisible;
@@ -47,9 +44,6 @@
 
 -(void)manuallyRotateToOrientation:(UIInterfaceOrientation)orientation;
 -(void)manuallyRotateToOrientation:(UIInterfaceOrientation)newOrientation duration:(NSTimeInterval)duration;
-
--(void)refreshOrientationModesIfNeeded:(TiWindowProxy *)oldCurrentWindow;
--(void)enforceOrientationModesFromWindow:(TiWindowProxy *) newCurrentWindow;
 
 -(void)setOrientationModes:(NSArray *)newOrientationModes;
 

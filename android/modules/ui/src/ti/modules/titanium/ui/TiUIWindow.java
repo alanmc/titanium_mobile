@@ -344,7 +344,9 @@ public class TiUIWindow extends TiUIView
 			animateOnClose = props.getBoolean("animated");
 		}
 
+		boolean revertToCreatedContext = false;
 		if (createdContext != null && createdContext.get() != null) {
+			revertToCreatedContext = true;
 			createdContext.get().dispatchEvent("close", data, proxy);
 			createdContext.clear();
 		}
@@ -366,6 +368,11 @@ public class TiUIWindow extends TiUIView
 				}
 				liteWindow.removeAllViews();
 				liteWindow = null;
+			}
+		}
+		if (revertToCreatedContext) {
+			if (proxy instanceof TiWindowProxy) {
+				((TiWindowProxy)proxy).switchToCreatingContext();
 			}
 		}
 	}
@@ -606,5 +613,18 @@ public class TiUIWindow extends TiUIView
 		intent.putExtra("messageId", MSG_ACTIVITY_CREATED);
 
 		return intent;
+	}
+
+	@Override
+	public void release()
+	{
+		super.release();
+		if (liteWindow != null) {
+			liteWindow.removeAllViews();
+			liteWindow = null;
+		}
+		messenger = null;
+		handler = null;
+		windowActivity = null;
 	}
 }
