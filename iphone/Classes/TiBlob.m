@@ -3,6 +3,8 @@
  * Copyright (c) 2009-2010 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the Apache Public License
  * Please see the LICENSE included with this distribution for details.
+ * 
+ * WARNING: This is generated code. Modify at your own risk and without support.
  */
 
 #import "TiBlob.h"
@@ -301,6 +303,22 @@
 		NSUInteger width = [TiUtils intValue:[args objectAtIndex:0]];
 		NSUInteger height = [TiUtils intValue:[args objectAtIndex:1]];
 		return [[[TiBlob alloc] initWithImage:[UIImageResize resizedImage:CGSizeMake(width, height) interpolationQuality:kCGInterpolationHigh image:image]] autorelease];
+	}
+	return nil;
+}
+
+- (id)imageAsCropped:(id)args
+{
+	[self ensureImageLoaded];
+	if (image!=nil)
+	{
+		ENSURE_ARG_COUNT(args,4);
+		NSUInteger x = [TiUtils intValue:[args objectAtIndex:0]];
+		NSUInteger y = [TiUtils intValue:[args objectAtIndex:1]];
+		NSUInteger width = [TiUtils intValue:[args objectAtIndex:2]];
+		NSUInteger height = [TiUtils intValue:[args objectAtIndex:3]];
+
+		return [[[TiBlob alloc] initWithImage:[UIImageResize croppedImage:CGRectMake(x, y, width, height) image:image]] autorelease];
 	}
 	return nil;
 }

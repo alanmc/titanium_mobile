@@ -136,8 +136,6 @@ enum
 
 	id listener = [[getAlbumsSuccessCallback retain] autorelease];
 
-	NSLog(@"Sending GetAlbumsSuccess %@", listener);
-
 	if (listener!=nil)
 	{
 		[NSThread detachNewThreadSelector:@selector(dispatchCallback:) toTarget:self withObject:[NSArray arrayWithObjects:@"success",event,listener,nil]];
@@ -148,8 +146,6 @@ enum
 {
 
 	id listener = [[getAlbumsErrorCallback retain] autorelease];
-
-	NSLog(@"Sending GetAlbumsFailure %@", listener);
 
 	if (listener!=nil)
 	{
@@ -162,8 +158,6 @@ enum
 
 	id listener = [[getAlbumAssetsByIndexSuccessCallback retain] autorelease];
 
-	NSLog(@"Sending getAlbumAssetsByIndexSuccessCallback %@", listener);
-
 	if (listener!=nil)
 	{
 		[NSThread detachNewThreadSelector:@selector(dispatchCallback:) toTarget:self withObject:[NSArray arrayWithObjects:@"success",event,listener,nil]];
@@ -174,8 +168,6 @@ enum
 {
 
 	id listener = [[getAlbumAssetsByIndexErrorCallback retain] autorelease];
-
-	NSLog(@"Sending getAlbumAssetsByIndexErrorCallback %@", listener);
 
 	if (listener!=nil)
 	{
@@ -750,17 +742,18 @@ if (![TiUtils isIOS4OrGreater]) { \
 	}
 }
 
--(TiBlob *)getAsset:(id)arg
+-(NSDictionary *)getAsset:(id)arg
 {
 
   ONLY_IN_IOS4_OR_GREATER(getAsset,nil)
   ENSURE_SINGLE_ARG(arg, NSString);
 
-  if (currentBuffer != nil) {
-    [currentBuffer release];
-    NSLog(@"currentBuffer retainCount: %u", [currentBuffer retainCount]);
-    currentBuffer = nil;
+  if (currentAssetInfo == nil) {
+    currentAssetInfo = [[NSMutableDictionary alloc] init];
+  } else {
+    [currentAssetInfo removeAllObjects];
   }
+
 
   if (library==nil) {
     library=[[ALAssetsLibrary alloc] init];
@@ -771,30 +764,37 @@ if (![TiUtils isIOS4OrGreater]) { \
   void (^assetConverter)(struct ALAsset *) = ^(ALAsset *asset) {
 
     if (asset==nil) {
-      NSLog(@"ALAsset was nil");
       isDoneRetrievingAsset = YES;
-      currentBuffer = nil;
+      currentAssetInfo = nil;
       return;
     }
 
     ALAssetRepresentation* rep = [asset representationForUTI:@"public.jpeg"];
+    NSMutableString* mimeType = @"image/jpeg";
 
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.png"];
+      mimeType = @"image/png";
     }
     
     if (rep == nil) {
       rep = [asset representationForUTI:@"public.gif"];
+      mimeType = @"image/gif";
     }
 
     if (rep == nil) {
-      rep = [asset representationForUTI:@"public.tiif"];
+      rep = [asset representationForUTI:@"com.compuserve.gif"];
+      mimeType = @"image/gif";
+    }
+    
+    if (rep == nil) {
+      rep = [asset representationForUTI:@"public.tiff"];
+      mimeType = @"image/tiff";
     }
 
     if (rep==nil) {
-      NSLog(@"ALAssetRepresentation was nil");
       isDoneRetrievingAsset = YES;
-      currentBuffer = nil;
+      currentAssetInfo = nil;
       return;
     }
     
@@ -804,19 +804,23 @@ if (![TiUtils isIOS4OrGreater]) { \
 	 length:[rep size]
 	 error:NULL];
     
-    currentBuffer = [[TiBlob alloc] initWithData:[NSData dataWithBytes:(void *)dataBuffer
-							 length:[rep size]]
-				    mimetype:@"image/jpeg"];
+    TiBlob* buffer = [[TiBlob alloc] initWithData:[NSData dataWithBytes:(void *)dataBuffer
+							  length:[rep size]]
+				     mimetype:mimeType];
     
     free(dataBuffer);
+
+    [currentAssetInfo setObject:buffer forKey:@"image"];
+    [currentAssetInfo setObject:[asset valueForProperty:ALAssetPropertyDate] forKey:@"date"];
+
     isDoneRetrievingAsset = YES;
 
   };
   [library assetForURL:[NSURL URLWithString:arg]
            resultBlock:assetConverter
            failureBlock: ^(NSError *error) {
-      currentBuffer = nil;
-      NSLog(@"Failure");
+      currentAssetInfo = nil;
+      NSLog(@"getAsset failed");
       isDoneRetrievingAsset = YES;
     }];
 
@@ -826,7 +830,7 @@ if (![TiUtils isIOS4OrGreater]) { \
 
   isDoneRetrievingAsset = NO;
 
-  return currentBuffer;
+  return currentAssetInfo;
 }
 
 -(NSDictionary *)getAssetThumbnail:(id)arg
@@ -834,12 +838,6 @@ if (![TiUtils isIOS4OrGreater]) { \
 
   ONLY_IN_IOS4_OR_GREATER(getAssetThumbnail,nil);
   ENSURE_SINGLE_ARG(arg, NSString);
-
-  //  if (currentBuffer != nil) {
-  //    [currentBuffer release];
-  //    NSLog(@"currentBuffer retainCount: %u", [currentBuffer retainCount]);
-  //    currentBuffer = nil;
-  //  }
 
   if (currentAssetInfo == nil) {
     currentAssetInfo = [[NSMutableDictionary alloc] init];
@@ -856,7 +854,6 @@ if (![TiUtils isIOS4OrGreater]) { \
   void (^assetConverter)(struct ALAsset *) = ^(ALAsset *asset) {
 
     if (asset==nil) {
-      NSLog(@"ALAsset was nil");
       isDoneRetrievingAsset = YES;
       currentAssetInfo = nil;
       return;
@@ -873,11 +870,14 @@ if (![TiUtils isIOS4OrGreater]) { \
     }
     
     if (rep == nil) {
+      rep = [asset representationForUTI:@"com.compuserve.gif"];
+    }
+    
+    if (rep == nil) {
       rep = [asset representationForUTI:@"public.tiff"];
     }
     
     if (rep==nil) {
-      NSLog(@"ALAssetRepresentation was nil");
       isDoneRetrievingAsset = YES;
       currentAssetInfo = nil;
       return;
@@ -886,7 +886,6 @@ if (![TiUtils isIOS4OrGreater]) { \
     CGImageRef repData = [rep fullScreenImage];
     
     if (repData==nil) {
-      NSLog(@"fullScreen representation not found");
       isDoneRetrievingAsset = YES;
       currentAssetInfo = nil;
       return;
@@ -921,7 +920,7 @@ if (![TiUtils isIOS4OrGreater]) { \
            resultBlock:assetConverter
            failureBlock: ^(NSError *error) {
       currentAssetInfo = nil;
-      NSLog(@"Failure");
+      NSLog(@"getAssetThumbnails Failure");
       isDoneRetrievingAsset = YES;
     }];
 
@@ -959,7 +958,6 @@ if (![TiUtils isIOS4OrGreater]) { \
   void (^assetConverter)(struct ALAsset *) = ^(ALAsset *asset) {
 
     if (asset==nil) {
-      NSLog(@"ALAsset was nil");
       currentAssetInfo = nil;
       isDoneRetrievingAsset = YES;
       return;
@@ -968,7 +966,6 @@ if (![TiUtils isIOS4OrGreater]) { \
     CGImageRef repData = [asset thumbnail];
     
     if (repData==nil) {
-      NSLog(@"fullScreen representation not found");
       currentAssetInfo = nil;
       isDoneRetrievingAsset = YES;
       return;
@@ -1002,7 +999,7 @@ if (![TiUtils isIOS4OrGreater]) { \
            resultBlock:assetConverter
            failureBlock: ^(NSError *error) {
       currentAssetInfo = nil;
-      NSLog(@"Failure");
+      NSLog(@"getAssetPoster Failure");
       isDoneRetrievingAsset = YES;
     }];
   while (isDoneRetrievingAsset == NO) {
@@ -1049,11 +1046,7 @@ if (![TiUtils isIOS4OrGreater]) { \
     }
 
     [group setAssetsFilter:[ALAssetsFilter allPhotos]];
-    NSLog(@"Found Group: %@", group);
-    NSLog(@"Found Group Name: %@", [group valueForProperty:ALAssetsGroupPropertyName]);
-    NSLog(@"Found Group Type: %@", [group valueForProperty:ALAssetsGroupPropertyType]);
-    NSLog(@"Found Group Count: %@", [NSNumber numberWithInteger:[group numberOfAssets]]);
-    
+
     NSArray *keys = [NSArray arrayWithObjects:@"name",
 			     @"type",
 			     @"count",
@@ -1076,7 +1069,7 @@ if (![TiUtils isIOS4OrGreater]) { \
   [library enumerateGroupsWithTypes:ALAssetsGroupAlbum
            usingBlock:assetGroupEnumerator
            failureBlock: ^(NSError *error) {
-      NSLog(@"Failure");
+      NSLog(@"getAlbums Failure");
       albums = nil;
       isDoneEnumeratingAlbums = YES;
       [self sendGetAlbumsError:[NSNumber numberWithInteger:0]];
@@ -1105,9 +1098,6 @@ if (![TiUtils isIOS4OrGreater]) { \
   unsigned int startIndex = [startIndexArg unsignedIntValue]; //[args objectForKey:"@startIndex"];
   unsigned int count =[countArg unsignedIntValue]; //[args objectForKey:@"count"];
 
-  NSLog(@"startIndex: %u", startIndex);
-  NSLog(@"count: %u", count);
-  
   if (library==nil) {
     library=[[ALAssetsLibrary alloc] init];
   }
@@ -1129,6 +1119,7 @@ if (![TiUtils isIOS4OrGreater]) { \
   void (^assetEnumerator)(struct ALAsset *, NSUInteger, BOOL *) = ^(ALAsset *result, NSUInteger index, BOOL *stop) {
     
     if(result != nil) {
+
       ALAssetRepresentation* rep = [result representationForUTI:@"public.jpeg"];
 
       if (rep == nil) {
@@ -1140,13 +1131,14 @@ if (![TiUtils isIOS4OrGreater]) { \
       }
 
       if (rep == nil) {
+	rep = [result representationForUTI:@"com.compuserve.gif"];
+      }
+
+      if (rep == nil) {
 	rep = [result representationForUTI:@"public.tiff"];
       }
 
-      NSLog(@"rep: %@", rep);
-
       if (rep != NULL) {
-        NSLog(@"Adding url: %@", [[rep url] absoluteString]);
         [albumAssets addObject:[[rep url] absoluteString]];
       }
 
@@ -1158,16 +1150,15 @@ if (![TiUtils isIOS4OrGreater]) { \
     if(group != nil) {
       
       if (albumName == nil || [albumName isEqualToString:[group valueForProperty:ALAssetsGroupPropertyName]]) {
+	[group setAssetsFilter:[ALAssetsFilter allPhotos]];
 	unsigned int endCount = count;
 
 	if ([group numberOfAssets] <= startIndex) {
-	  NSLog(@"startIndex too large...failing");
 	  [self sendGetAlbumAssetsByIndexError:0];
 	  return;
 	}
 	
 	if ([group numberOfAssets] < (startIndex + count)) {
-	  NSLog(@"count too large");
 	  endCount = [group numberOfAssets] - startIndex;
 	} 
 	
@@ -1177,7 +1168,6 @@ if (![TiUtils isIOS4OrGreater]) { \
       }
       
     } else {
-      NSLog(@"Group NULL");
       [currentAlbumAssets addObject:albumAssets forKey:@"assets"];
       [self sendGetAlbumAssetsByIndexSuccess:currentAlbumAssets];
     }
@@ -1186,7 +1176,7 @@ if (![TiUtils isIOS4OrGreater]) { \
   [library enumerateGroupsWithTypes:ALAssetsGroupAlbum
            usingBlock:assetGroupEnumerator
            failureBlock: ^(NSError *error) {
-      NSLog(@"Failure");
+      NSLog(@"getAlbumAssets Failure");
       albumAssets = nil;
       isDoneEnumeratingAlbumAssets = YES;
       [self sendGetAlbumAssetsByIndexError:0];
@@ -1244,7 +1234,6 @@ if (![TiUtils isIOS4OrGreater]) { \
       }
 
       if (rep != NULL) {
-        NSLog(@"Adding url: %@", [[rep url] absoluteString]);
         [albumAssets addObject:[[rep url] absoluteString]];
       }
     }
@@ -1259,7 +1248,6 @@ if (![TiUtils isIOS4OrGreater]) { \
       }
       
     } else {
-      NSLog(@"Group NULL");
       [currentAlbumAssets addObject:albumAssets forKey:@"assets"];
       [self sendGetAlbumAssetsByIndexSuccess:currentAlbumAssets];
     }
@@ -1268,7 +1256,7 @@ if (![TiUtils isIOS4OrGreater]) { \
   [library enumerateGroupsWithTypes:ALAssetsGroupAlbum
            usingBlock:assetGroupEnumerator
            failureBlock: ^(NSError *error) {
-      NSLog(@"Failure");
+      NSLog(@"getAlbumAssets Failure");
       albumAssets = nil;
       [self sendGetAlbumAssetsByIndexError:0];
     }];  
