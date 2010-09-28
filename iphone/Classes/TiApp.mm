@@ -470,6 +470,7 @@ NSString *templateReviewURL = @"itms-apps://itunes.apple.com/WebObjects/MZStore.
 	
 	[kjsBridge boot:self url:nil preload:nil];
 
+	WARN_IF_BACKGROUND_THREAD;	//NSNotificationCenter is not threadsafe!
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
 	
@@ -771,6 +772,7 @@ NSString *templateReviewURL = @"itms-apps://itunes.apple.com/WebObjects/MZStore.
 
 - (void)dealloc 
 {
+	WARN_IF_BACKGROUND_THREAD;	//NSNotificationCenter is not threadsafe!
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardDidHideNotification object:nil];
 	[[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardDidShowNotification object:nil];
 	RELEASE_TO_NIL(kjsBridge);
